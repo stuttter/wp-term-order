@@ -212,9 +212,16 @@ final class WP_Term_Order {
 	 *
 	 * @return string
 	 */
-	public function edit_term_orderby() {
-		remove_filter( 'get_terms_orderby', array( $this, 'edit_term_orderby' ) );
-		return 'order';
+	public function edit_term_orderby( $order_by = '' ) {
+
+		// Unfilter the filter
+		remove_filter( 'get_terms_orderby', array( $this, 'edit_term_orderby' ), 10, 2 );
+
+		// Force `tt.order`
+		// @todo probably something more smart
+		$order_by = 'tt.order';
+
+		return $order_by;
 	}
 
 	/**
@@ -223,9 +230,13 @@ final class WP_Term_Order {
 	 * @return array
 	 */
 	public function find_term_orderby( $args = array() ) {
+
+		// Order by `order` with a filter
 		if ( 'order' === $args['orderby'] ) {
-			add_filter( 'get_terms_orderby', array( $this, 'edit_term_orderby' ) );
+			add_filter( 'get_terms_orderby', array( $this, 'edit_term_orderby' ), 10, 2 );
 		}
+
+		// Return unmodified $args, all we wanted to do was filter
 		return $args;
 	}
 }
