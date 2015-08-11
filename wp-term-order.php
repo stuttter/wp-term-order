@@ -100,7 +100,7 @@ final class WP_Term_Order {
 	public function admin_init() {
 
 		// Check for DB update
-		$this->maybe_update_database();
+		$this->maybe_upgrade_database();
 
 		// Enqueue javascript
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -372,14 +372,14 @@ final class WP_Term_Order {
 	 *
 	 * Runs on `init`
 	 */
-	private function maybe_update_database() {
+	private function maybe_upgrade_database() {
 
 		// Check DB for version
 		$db_version = get_option( $this->db_version_key );
 
 		// Needs
 		if ( $db_version < $this->db_version ) {
-			$this->update_database( $db_version );
+			$this->upgrade_database( $db_version );
 		}
 	}
 
@@ -390,7 +390,7 @@ final class WP_Term_Order {
 	 *
 	 * @global object $wpdb
 	 */
-	private function update_database( $old_version = 0 ) {
+	private function upgrade_database( $old_version = 0 ) {
 		global $wpdb;
 
 		$old_version = (int) $old_version;
