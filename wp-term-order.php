@@ -30,7 +30,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = '201508110005';
+	public $db_version = 201508110005;
+
+	/**
+	 * @var string Database version
+	 */
+	public $db_version_key = 'wpdb_term_taxonomy_version';
 
 	/**
 	 * @var string File for plugin
@@ -96,9 +101,6 @@ final class WP_Term_Order {
 
 		// Check for DB update
 		$this->maybe_update_database();
-
-		// Alter the `term_taxonomy` table
-		register_activation_hook( __FILE__, array( $this, 'activate' ) );
 
 		// Enqueue javascript
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -373,7 +375,7 @@ final class WP_Term_Order {
 	private function maybe_update_database() {
 
 		// Check DB for version
-		$db_version = get_option( 'term_order_db_version' );
+		$db_version = get_option( $this->db_version_key );
 
 		// Needs
 		if ( $db_version < $this->db_version ) {
@@ -391,13 +393,15 @@ final class WP_Term_Order {
 	private function update_database( $old_version = 0 ) {
 		global $wpdb;
 
+		$old_version = (int) $old_version;
+
 		// The main column alter
-		if ( $old_version < '201508110005' ) {
+		if ( $old_version < 201508110005 ) {
 			$wpdb->query( "ALTER TABLE `{$wpdb->term_taxonomy}` ADD `order` INT (11) NOT NULL DEFAULT 0;" );
 		}
 
 		// Update the DB version
-		update_option( 'term_order_db_version', $this->db_version );
+		update_option( $this->db_version_key, $this->db_version );
 	}
 }
 endif;
