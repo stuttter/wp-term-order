@@ -12,7 +12,7 @@ WP Term Order allows users to order any visible category, tag, or taxonomy term 
 
 # Demo
 
-![Term Reorder](plugins.svn.wordpress.org/wp-term-order/assets/screenshot-1.gif)
+![Term Reorder](screenshot-1.gif)
 
 # FAQ
 
