@@ -33,10 +33,12 @@ $terms = get_terms( 'category', array(
 	'depth'      => 1,
 	'number'     => 100,
 	'parent'     => 0,
-	'orderby'    => 'order',
+	'orderby'    => 'order', // <--- Looky looky!
 	'order'      => 'ASC',
 	'hide_empty' => false,
-	'meta_query' => array( array( // Try the "wp-term-meta" plugin!
+
+	// Try the "wp-term-meta" plugin!
+	'meta_query' => array( array(
 		'key' => 'term_thumbnail'
 	) )
 ) );
