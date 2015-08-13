@@ -143,7 +143,7 @@ function term_order_update_callback( response ) {
 
 				var dashes = 0;
 				while ( dashes < new_pos[ key ]['depth'] ) {
-					term_title = '&mdash; ' + term_title;
+					//term_title = '&mdash; ' + term_title;
 					dashes++;
 				}
 
@@ -169,7 +169,11 @@ function term_order_update_callback( response ) {
 			tax:      taxonomy
 		}, term_order_update_callback );
 	} else {
-		jQuery( '.to-row-updating' ).removeClass( 'to-row-updating' );
+
+		setTimeout( function() {
+			jQuery( '.to-row-updating' ).removeClass( 'to-row-updating' );
+		}, 500 );
+
 		sortable_terms_table.removeClass( 'to-updating' ).sortable( 'enable' );
 	}
 }

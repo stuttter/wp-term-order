@@ -3,7 +3,7 @@
 /**
  * Plugin Name: WP Term Order
  * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
- * Description: Sort terms, your way.
+ * Description: Sort taxonomy terms, your way.
  * Author:      John James Jacoby
  * Version:     0.1.0
  * Author URI:  https://profiles.wordpress.org/johnjamesjacoby/
@@ -591,7 +591,7 @@ final class WP_Term_Order {
 		foreach ( $siblings as $sibling ) {
 
 			// Skip the actual term if it's in the array
-			if ( $sibling->term_id === $term->term_id ) {
+			if ( $sibling->term_id === (int) $term->term_id ) {
 				continue;
 			}
 
@@ -613,7 +613,7 @@ final class WP_Term_Order {
 
 			// If repositioned term has been set and new items are already in
 			// the right order, we can stop looping
-			if ( isset( $new_pos[ $term->term_id ] ) && $sibling->order >= $start ) {
+			if ( isset( $new_pos[ $term->term_id ] ) && (int) $sibling->order >= $start ) {
 				$return_data->next = false;
 				break;
 			}
