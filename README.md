@@ -7,8 +7,8 @@ WP Term Order allows users to order any visible category, tag, or taxonomy term 
 # Installation
 
 * Download and install using the built in WordPress plugin installer.
-* Activate in the "Plugins" network admin panel using the "Activate" link.
-* When activating for an entire network, each site will have it's own ordering.
+* Activate in the "Plugins" area of your admin by clicking the "Activate" link.
+* No further setup or configuration is necessary.
 
 # Demo
 
