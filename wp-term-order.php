@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: WP Term Order
  * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
@@ -18,7 +19,7 @@ if ( ! class_exists( 'WP_Term_Order' ) ) :
  *
  * @link https://make.wordpress.org/core/2013/07/28/potential-roadmap-for-taxonomy-meta-and-post-relationships/ Taxonomy Roadmap
  *
- * @since bbPress (r2464)
+ * @since 0.1.0
  */
 final class WP_Term_Order {
 
@@ -58,6 +59,11 @@ final class WP_Term_Order {
 	public $basename = '';
 
 	/**
+	 * @var boo Whether to use fancy ordering
+	 */
+	public $fancy = false;
+
+	/**
 	 * Hook into queries, admin screens, and more!
 	 */
 	public function __construct() {
@@ -67,30 +73,37 @@ final class WP_Term_Order {
 		$this->url      = plugin_dir_url( $this->file );
 		$this->path     = plugin_dir_path( $this->file );
 		$this->basename = plugin_basename( $this->file );
+		$this->fancy    = apply_filters( 'wp_fancy_term_order', true );
 
 		// Queries
-		add_filter( 'get_terms_args', array( $this, 'find_term_orderby' ) );
-		add_action( 'create_term',    array( $this, 'add_term_order'    ) );
-		add_action( 'edit_term',      array( $this, 'add_term_order'    ) );
+		add_filter( 'get_terms_orderby', array( $this, 'get_terms_orderby' ), 10, 2 );
+		add_action( 'create_term',       array( $this, 'add_term_order'    ), 10, 2 );
+		add_action( 'edit_term',         array( $this, 'add_term_order'    ), 10, 2 );
 
 		// Get visible taxonomies
 		$taxonomies = $this->get_taxonomies();
 
 		// Always hook these in, for ajax actions
 		foreach ( $taxonomies as $value ) {
-			add_filter( "manage_edit-{$value}_columns",          array( $this, 'add_column_header' ) );
-			add_filter( "manage_{$value}_custom_column",         array( $this, 'add_column_value' ), 10, 3 );
-			add_filter( "manage_edit-{$value}_sortable_columns", array( $this, 'sortable_columns' ) );
 
-			add_action( "{$value}_add_form_fields",  array( $this, 'term_order_add_form_field' ) );
+			// Unfancy gets the column
+			if ( false === $this->fancy ) {
+				add_filter( "manage_edit-{$value}_columns",          array( $this, 'add_column_header' ) );
+				add_filter( "manage_{$value}_custom_column",         array( $this, 'add_column_value' ), 10, 3 );
+				add_filter( "manage_edit-{$value}_sortable_columns", array( $this, 'sortable_columns' ) );
+			}
+
+			add_action( "{$value}_add_form_fields",  array( $this, 'term_order_add_form_field'  ) );
 			add_action( "{$value}_edit_form_fields", array( $this, 'term_order_edit_form_field' ) );
-
-			//add_action( "edited_{$value}", array( $this, 'add_term_order' ) );
 		}
+
+		// Ajax actions
+		add_action( 'wp_ajax_reordering_terms', array( $this, 'ajax_reordering_terms' ) );
 
 		// Only blog admin screens
 		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) ) {
-			add_action( 'admin_init', array( $this, 'admin_init' ) );
+			add_action( 'admin_init',         array( $this, 'admin_init' ) );
+			add_action( 'load-edit-tags.php', array( $this, 'edit_tags'  ) );
 		}
 	}
 
@@ -101,6 +114,12 @@ final class WP_Term_Order {
 
 		// Check for DB update
 		$this->maybe_upgrade_database();
+	}
+
+	/**
+	 * Administration area hooks
+	 */
+	public function edit_tags() {
 
 		// Enqueue javascript
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -116,20 +135,83 @@ final class WP_Term_Order {
 	 * Enqueue quick-edit JS
 	 */
 	public function enqueue_scripts() {
-		wp_enqueue_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ), $this->db_version );
+		wp_enqueue_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ), $this->db_version, true );
+
+		// Enqueue fancy ordering
+		if ( true === $this->fancy ) {
+			wp_enqueue_script( 'term-order-reorder', $this->url . 'js/reorder.js', array( 'jquery-ui-sortable' ), $this->db_version, true );
+		}
 	}
 
 	/**
 	 * Align custom `order` column
 	 */
 	public function admin_head() {
-		?>
+
+		// Add a helpful help tab
+		if ( true === $this->fancy ) {
+			get_current_screen()->add_help_tab(array(
+				'id'      => 'wp_term_order_help_tab',
+				'title'   => __( 'Term Order' ),
+				'content' => '<p>' . __( 'To reposition an item, drag and drop the row by "clicking and holding" it anywhere and moving it to its new position.' ) . '</p>',
+			) );
+		} ?>
 
 		<style type="text/css">
 			.column-order {
 				text-align: center;
 				width: 74px;
 			}
+
+			<?php if ( true === $this->fancy ) : ?>
+
+			.wp-list-table .ui-sortable tr {
+				cursor: move;
+			}
+
+			.striped.dragging > tbody > .ui-sortable-helper ~ tr:nth-child(even) {
+				background: #f9f9f9;
+			}
+
+			.striped.dragging > tbody > .ui-sortable-helper ~ tr:nth-child(odd) {
+				background: #fff;
+			}
+
+			.wp-list-table .to-updating tr,
+			.wp-list-table .ui-sortable tr.inline-editor {
+				cursor: default;
+			}
+
+			.wp-list-table .ui-sortable-placeholder {
+				outline: 1px dashed #bbb;
+				background: #f1f1f1 !important;
+				visibility: visible !important;
+			}
+			.wp-list-table .ui-sortable-helper {
+				background-color: #fff !important;
+				outline: 1px solid #bbb;
+			}
+			.wp-list-table .ui-sortable-helper .row-actions {
+				visibility: hidden;
+			}
+			.to-row-updating .check-column {
+				background: url('<?php echo admin_url( '/images/spinner.gif' );?>') 10px 9px no-repeat;
+			}
+			@media print,
+			(-o-min-device-pixel-ratio: 5/4),
+			(-webkit-min-device-pixel-ratio: 1.25),
+			(min-resolution: 120dpi) {
+				.to-row-updating .check-column {
+					background-image: url('<?php echo admin_url( '/images/spinner-2x.gif' );?>');
+					background-size: 20px 20px;
+				}
+			}
+			.to-row-updating .check-column input {
+				visibility: hidden;
+			}
+
+			<?php endif; ?>
+
 		</style>
 
 		<?php
@@ -202,15 +284,33 @@ final class WP_Term_Order {
 	 * Add `order` to term when updating
 	 *
 	 * @global object $wpdb
-	 * @param type $term_id
+	 *
+	 * @param  int     $term_id
+	 * @param  string  $taxonomy
 	 */
-	public function add_term_order( $term_id = 0 ) {
-		global $wpdb;
+	public function add_term_order( $term_id = 0, $taxonomy = '' ) {
 
 		// Bail if not updating order
 		$order = ! empty( $_POST['order'] )
 			? (int) $_POST['order']
 			: 0;
+
+		self::set_term_order( $term_id, $taxonomy, $order );
+	}
+
+	/**
+	 * Set order of a specific term
+	 *
+	 * @since 0.1.0
+	 *
+	 * @global object  $wpdb
+	 * @param  int     $term_id
+	 * @param  string  $taxonomy
+	 * @param  int     $order
+	 * @param  bool    $clean_cache
+	 */
+	public static function set_term_order( $term_id = 0, $taxonomy = '', $order = 0, $clean_cache = false ) {
+		global $wpdb;
 
 		// Update the database row
 		$wpdb->update(
@@ -219,17 +319,23 @@ final class WP_Term_Order {
 				'order' => $order
 			),
 			array(
-				'term_id' => $term_id
+				'term_id'  => $term_id,
+				'taxonomy' => $taxonomy
 			)
 		);
+
+		// Maybe clean the term cache
+		if ( true === $clean_cache ) {
+			clean_term_cache( $term_id, $taxonomy );
+		}
 	}
 
 	/**
 	 * Return the order of a term
 	 *
-	 * @param object $term_id
+	 * @param int $term_id
 	 */
-	public function get_term_order( $term_id = '' ) {
+	public function get_term_order( $term_id = 0 ) {
 
 		// Get the term, probably from cache at this point
 		$term = get_term( $term_id, $_REQUEST['taxonomy'] );
@@ -249,7 +355,7 @@ final class WP_Term_Order {
 
 			if ( ! empty( $orders ) ) {
 				foreach ( $orders as $position => $value ) {
-					if ( $value === $term->ID ) {
+					if ( $value === $term->term_id ) {
 						$retval = $position;
 						break;
 					}
@@ -336,36 +442,22 @@ final class WP_Term_Order {
 	/** Query Filters *********************************************************/
 
 	/**
-	 * Filter `get_terms_orderby` and order by `order` column
+	 * Force `orderby` to `tt.order` if not explicitly set to something else
 	 *
+	 * @since 0.1.0
+	 *
+	 * @param  string $orderby
 	 * @return string
 	 */
-	public function edit_term_orderby( $order_by = '' ) {
+	public function get_terms_orderby( $orderby = 'name', $args = array() ) {
 
-		// Unfilter the filter
-		remove_filter( 'get_terms_orderby', array( $this, 'edit_term_orderby' ), 10, 2 );
-
-		// Force `tt.order`
-		// @todo probably something more smart
-		$order_by = 'tt.order';
-
-		return $order_by;
-	}
-
-	/**
-	 * Maybe filter `get_terms_orderby` and order by `order` column
-	 *
-	 * @return array
-	 */
-	public function find_term_orderby( $args = array() ) {
-
-		// Order by `order` with a filter
-		if ( 'order' === $args['orderby'] ) {
-			add_filter( 'get_terms_orderby', array( $this, 'edit_term_orderby' ), 10, 2 );
+		// Maybe force `orderby`
+		if ( empty( $args['orderby'] ) || ( 'order' === $args['orderby'] ) || ( 'name' === $args['orderby'] && empty( $_GET['orderby'] ) ) ) {
+			$orderby = 'tt.order';
 		}
 
-		// Return unmodified $args, all we wanted to do was filter
-		return $args;
+		// Return possibly modified `orderby` value
+		return $orderby;
 	}
 
 	/** Database Alters *******************************************************/
@@ -405,6 +497,185 @@ final class WP_Term_Order {
 
 		// Update the DB version
 		update_option( $this->db_version_key, $this->db_version );
+	}
+
+	/** Admin Ajax ************************************************************/
+
+	/**
+	 * Handle ajax term reordering
+	 *
+	 * This bit is inspired by the Simple Page Ordering plugin from 10up
+	 *
+	 * @since 0.1.0
+	 */
+	public static function ajax_reordering_terms() {
+
+		// Bail if required term data is missing
+		if ( empty( $_POST['id'] ) || empty( $_POST['tax'] ) || ( ! isset( $_POST['previd'] ) && ! isset( $_POST['nextid'] ) ) ) {
+			die( -1 );
+		}
+
+		// Attempt to get the taxonomy
+		$tax = get_taxonomy( $_POST['tax'] );
+
+		// Bail if taxonomy does not exist
+		if ( empty( $tax ) ) {
+			die( -1 );
+		}
+
+		// Bail if current user cannot assign terms
+		if ( ! current_user_can( $tax->cap->edit_terms ) ) {
+			die( -1 );
+		}
+
+		// Bail if term cannot be found
+		$term = get_term( $_POST['id'], $_POST['tax'] );
+		if ( empty( $term ) ) {
+			die( -1 );
+		}
+
+		// Sanitize positions
+		$taxonomy = $_POST['tax'];
+		$previd   = empty( $_POST['previd']   ) ? false : (int) $_POST['previd'];
+		$nextid   = empty( $_POST['nextid']   ) ? false : (int) $_POST['nextid'];
+		$start    = empty( $_POST['start']    ) ? 1     : (int) $_POST['start'];
+		$excluded = empty( $_POST['excluded'] ) ?
+			array( $term->term_id ) :
+			array_filter( (array) $_POST['excluded'], 'intval' );
+
+		// Define return values
+		$new_pos     = array();
+		$return_data = new stdClass;
+
+		// attempt to get the intended parent...
+		$parent_id        = $term->parent;
+		$next_term_parent = $nextid
+			? wp_get_term_taxonomy_parent_id( $nextid, $taxonomy )
+			: false;
+
+		// If the preceding term is the parent of the next term, move it inside
+		if ( $previd === $next_term_parent ) {
+			$parent_id = $next_term_parent;
+
+		// If the next term's parent isn't the same as our parent, we need more info
+		} elseif ( $next_term_parent !== $parent_id ) {
+			$prev_term_parent = $previd
+				? wp_get_term_taxonomy_parent_id( $nextid, $taxonomy )
+				: false;
+
+			// If the previous term is not our parent now, set it
+			if ( $prev_term_parent !== $parent_id ) {
+				$parent_id = ( $prev_term_parent !== false )
+					? $prev_term_parent
+					: $next_term_parent;
+			}
+		}
+
+		// If the next term's parent isn't our parent, set to false
+		if ( $next_term_parent !== $parent_id ) {
+			$nextid = false;
+		}
+
+		// Get term siblings for relative ordering
+		$siblings = get_terms( $taxonomy, array(
+			'depth'      => 1,
+			'number'     => 100,
+			'parent'     => $parent_id,
+			'orderby'    => 'order',
+			'order'      => 'ASC',
+			'hide_empty' => false,
+			'exclude'    => $excluded
+		) );
+
+		// Loop through siblings and update terms
+		foreach ( $siblings as $sibling ) {
+
+			// Skip the actual term if it's in the array
+			if ( $sibling->term_id === $term->term_id ) {
+				continue;
+			}
+
+			// If this is the term that comes after our repositioned term, set
+			// our repositioned term position and increment order
+			if ( $nextid === (int) $sibling->term_id ) {
+				self::set_term_order( $term->term_id, $taxonomy, $start, true );
+
+				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+
+				$new_pos[ $term->term_id ] = array(
+					'order'  => $start,
+					'parent' => $parent_id,
+					'depth'  => count( $ancestors ),
+				);
+
+				$start++;
+			}
+
+			// If repositioned term has been set and new items are already in
+			// the right order, we can stop looping
+			if ( isset( $new_pos[ $term->term_id ] ) && $sibling->order >= $start ) {
+				$return_data->next = false;
+				break;
+			}
+
+			// Set order of current sibling and increment the order
+			if ( $start !== (int) $sibling->order ) {
+				self::set_term_order( $sibling->term_id, $taxonomy, $start, true );
+			}
+
+			$new_pos[ $sibling->term_id ] = $start;
+			$start++;
+
+			if ( empty( $nextid ) && ( $previd === (int) $sibling->term_id ) ) {
+				self::set_term_order( $term->term_id, $taxonomy, $start, true );
+
+				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+
+				$new_pos[ $term->term_id ] = array(
+					'order'  => $start,
+					'parent' => $parent_id,
+					'depth'  => count( $ancestors )
+				);
+
+				$start++;
+			}
+		}
+
+		// max per request
+		if ( ! isset( $return_data->next ) && count( $siblings ) > 1 ) {
+			$return_data->next = array(
+				'id'       => $term->term_id,
+				'previd'   => $previd,
+				'nextid'   => $nextid,
+				'start'    => $start,
+				'excluded' => array_merge( array_keys( $new_pos ), $excluded ),
+				'taxonomy' => $taxonomy
+			);
+		} else {
+			$return_data->next = false;
+		}
+
+		if ( empty( $return_data->next ) ) {
+
+			// If the moved term has children, refresh the page for UI reasons
+			$children = get_terms( $taxonomy, array(
+				'number'     => 1,
+				'depth'      => 1,
+				'orderby'    => 'order',
+				'order'      => 'ASC',
+				'parent'     => $term->term_id,
+				'fields'     => 'ids',
+				'hide_empty' => false
+			) );
+
+			if ( ! empty( $children ) ) {
+				die( 'children' );
+			}
+		}
+
+		$return_data->new_pos = $new_pos;
+
+		die( json_encode( $return_data ) );
 	}
 }
 endif;
