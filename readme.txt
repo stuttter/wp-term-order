@@ -17,9 +17,9 @@ Also checkout [https://wordpress.org/plugins/wp-term-meta WP Term Meta]
 
 Download and install using the built in WordPress plugin installer.
 
-Activate in the "Plugins" network admin panel using the "Activate" link.
+Activate in the "Plugins" area of your admin by clicking the "Activate" link.
 
-When activating for an entire network, each site will have it's own ordering.
+No further setup or configuration is necessary.
 
 == Screenshots ==
 
