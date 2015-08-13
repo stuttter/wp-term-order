@@ -24,9 +24,23 @@ No. There are no new database tables with this plugin.
 
 Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
 
-### Does this support querying by metadata?
+### Can I query and sort by `order`?
 
-Yes. It uses the `WP_Meta_Query` class to create the necessary MySQL. You can interface with it by passing a `meta_query` argument into `get_terms()`, by filtering `get_terms_args` or however else you choose.
+Yes. Use it like:
+
+```
+$terms = get_terms( 'category', array(
+	'depth'      => 1,
+	'number'     => 100,
+	'parent'     => 0,
+	'orderby'    => 'order',
+	'order'      => 'ASC',
+	'hide_empty' => false,
+	'meta_query' => array( array( // Try the "wp-term-meta" plugin!
+		'key' => 'term_thumbnail'
+	) )
+) );
+```
 
 ### Where can I get support?
 
