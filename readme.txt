@@ -1,20 +1,41 @@
-=== WP Term Order ===
+=== WP Term Meta ===
 Contributors: johnjamesjacoby
-Tags: term order, terms, taxonomy, taxonomies, term_taxonomy
-Requires at least: 4.2.0
-Tested up to: 4.3.0
+Tags: taxonomy, term, order
+Requires at least: 4.2
+Tested up to: 4.3
 Stable tag: 0.1.0
-
-Creates an 'order' column in the `term_taxonomy` table allowing theme and plugin developers to sort taxonomy terms.
 
 == Description ==
 
-This plugin toys with the idea of ordering terms. It's mostly experimental, and you probably should not use it yet.
+Sort taxonomy terms, your way.
+
+WP Term Order allows users to order any visible category, tag, or taxonomy term numerically, providing a customized order for their taxonomies.
 
 == Installation ==
 
-1. Upload the wp-term-order plugin to /wp-content/plugins/
-1. Activate the plugin through the "Plugins" menu in WordPress
+Download and install using the built in WordPress plugin installer.
+
+Activate in the "Plugins" network admin panel using the "Activate" link.
+
+When activating for an entire network, each site will have it's own ordering.
+
+== Frequently Asked Questions ==
+
+= Does this create new database tables? =
+
+No. There are no new database tables with this plugin.
+
+= Does this modify existing database tables? =
+
+Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
+
+= Where can I get support? =
+
+The WordPress support forums: https://wordpress.org/tags/wp-term-order/
+
+= Where can I find documentation? =
+
+http://github.com/johnjamesjacoby/wp-term-order/
 
 == Changelog ==
 
