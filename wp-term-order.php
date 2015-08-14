@@ -696,4 +696,3 @@ function _wp_term_order() {
 	new WP_Term_Order();
 }
 add_action( 'init', '_wp_term_order', 99 );
-
