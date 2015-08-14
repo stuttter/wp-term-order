@@ -451,9 +451,16 @@ final class WP_Term_Order {
 	 */
 	public function get_terms_orderby( $orderby = 'name', $args = array() ) {
 
+		// Do not override if being manually controlled
+		if ( ! empty( $_GET['orderby'] ) && ! empty( $_GET['taxonomy'] ) ) {
+				return $orderby;
+		}
+
 		// Maybe force `orderby`
-		if ( empty( $args['orderby'] ) || ( 'order' === $args['orderby'] ) || ( 'name' === $args['orderby'] && empty( $_GET['orderby'] ) ) ) {
-			$orderby = 'tt.order';
+		if ( empty( $args['orderby'] ) || empty( $orderby ) || ( 'order' === $args['orderby'] ) || in_array( $orderby, array( 'name', 't.name' ) ) ) {
+				$orderby = 'tt.order';
+		} elseif ( 't.name' === $orderby ) {
+				$orderby = 'tt.order, t.name';
 		}
 
 		// Return possibly modified `orderby` value
