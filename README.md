@@ -2,7 +2,7 @@
 
 Sort taxonomy terms, your way.
 
-WP Term Order allows users to order any visible category, tag, or taxonomy term numerically, providing a customized order for their taxonomies.
+WP Term Order allows users to order any visible category, tag, or taxonomy term numerically, providing a customized order for their taxonomy terms.
 
 # Installation
 
