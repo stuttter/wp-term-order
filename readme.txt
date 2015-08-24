@@ -13,7 +13,7 @@ Sort taxonomy terms, your way.
 
 WP Term Order allows users to order any visible category, tag, or taxonomy term numerically, providing a customized order for their taxonomies.
 
-Also checkout:
+= Also checkout =
 
 * [WP Term Meta](https://wordpress.org/plugins/wp-term-meta/ "Metadata, for taxonomy terms.")
 * [WP Term Colors](https://wordpress.org/plugins/wp-term-colors/ "Pretty colors for categories, tags, and other taxonomy terms.")
