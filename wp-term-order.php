@@ -7,7 +7,7 @@
  * Author:      John James Jacoby
  * Version:     0.1.0
  * Author URI:  https://profiles.wordpress.org/johnjamesjacoby/
- * License:     GPL2
+ * License:     GPL v2 or later
  */
 
 // Exit if accessed directly
