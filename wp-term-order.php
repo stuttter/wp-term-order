@@ -5,7 +5,7 @@
  * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
  * Description: Sort taxonomy terms, your way.
  * Author:      John James Jacoby
- * Version:     0.1.0
+ * Version:     0.1.1
  * Author URI:  https://profiles.wordpress.org/johnjamesjacoby/
  * License:     GPL v2 or later
  */
@@ -26,12 +26,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '0.1.0';
+	public $version = '0.1.1';
 
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 201508110005;
+	public $db_version = 201508310001;
 
 	/**
 	 * @var string Database version
@@ -165,7 +165,7 @@ final class WP_Term_Order {
 
 			<?php if ( true === $this->fancy ) : ?>
 
-			.wp-list-table .ui-sortable tr {
+			.wp-list-table .ui-sortable tr:not(.no-items) {
 				cursor: move;
 			}
 

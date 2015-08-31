@@ -6,7 +6,7 @@ var sortable_terms_table = jQuery( '.wp-list-table tbody' ),
 sortable_terms_table.sortable( {
 
 	// Settings
-	items:     '> tr',
+	items:     '> tr:not(.no-items)',
 	cursor:    'move',
 	axis:      'y',
 	cancel: '  .inline-edit-row',
