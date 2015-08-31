@@ -65,6 +65,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Hook into queries, admin screens, and more!
+	 *
+	 * @since 0.1.0
 	 */
 	public function __construct() {
 
@@ -109,6 +111,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Administration area hooks
+	 *
+	 * @since 0.1.0
 	 */
 	public function admin_init() {
 
@@ -118,6 +122,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Administration area hooks
+	 *
+	 * @since 0.1.0
 	 */
 	public function edit_tags() {
 
@@ -133,6 +139,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Enqueue quick-edit JS
+	 *
+	 * @since 0.1.0
 	 */
 	public function enqueue_scripts() {
 		wp_enqueue_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ), $this->db_version, true );
@@ -145,6 +153,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Align custom `order` column
+	 *
+	 * @since 0.1.0
 	 */
 	public function admin_head() {
 
@@ -220,6 +230,8 @@ final class WP_Term_Order {
 	/**
 	 * Return the taxonomies used by this plugin
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param array $args
 	 * @return array
 	 */
@@ -239,6 +251,8 @@ final class WP_Term_Order {
 	/**
 	 * Add the "Order" column to taxonomy terms list-tables
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param array $columns
 	 *
 	 * @return array
@@ -251,6 +265,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Output the value for the custom column, in our case: `order`
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $empty
 	 * @param string $custom_column
@@ -271,6 +287,8 @@ final class WP_Term_Order {
 	/**
 	 * Allow sorting by `order` order
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param array $columns
 	 *
 	 * @return array
@@ -283,7 +301,7 @@ final class WP_Term_Order {
 	/**
 	 * Add `order` to term when updating
 	 *
-	 * @global object $wpdb
+	 * @since 0.1.0
 	 *
 	 * @param  int     $term_id
 	 * @param  string  $taxonomy
@@ -333,6 +351,8 @@ final class WP_Term_Order {
 	/**
 	 * Return the order of a term
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $term_id
 	 */
 	public function get_term_order( $term_id = 0 ) {
@@ -371,6 +391,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Output the "order" form field when adding a new term
+	 *
+	 * @since 0.1.0
 	 */
 	public static function term_order_add_form_field() {
 		?>
@@ -390,6 +412,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Output the "order" form field when editing an existing term
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param object $term
 	 */
@@ -415,6 +439,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Output the "order" quick-edit field
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param  $term
 	 */
@@ -472,6 +498,8 @@ final class WP_Term_Order {
 	/**
 	 * Should a database update occur
 	 *
+	 * @since 0.1.0
+	 *
 	 * Runs on `init`
 	 */
 	private function maybe_upgrade_database() {
@@ -487,6 +515,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Modify the `term_taxonomy` table and add an `order` column to it
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param  int    $old_version
 	 *
