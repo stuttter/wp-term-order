@@ -1,5 +1,5 @@
 === WP Term Order ===
-Contributors: johnjamesjacoby
+Contributors: johnjamesjacoby, stuttter
 Tags: taxonomy, term, order
 Requires at least: 4.2
 Tested up to: 4.3
