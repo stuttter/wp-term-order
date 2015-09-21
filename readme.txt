@@ -47,11 +47,11 @@ Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
 
 = Where can I get support? =
 
-The WordPress support forums: https://wordpress.org/tags/wp-term-order/
+The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/
 
 = Where can I find documentation? =
 
-http://github.com/johnjamesjacoby/wp-term-order/
+http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
 
