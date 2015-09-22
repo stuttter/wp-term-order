@@ -5,7 +5,7 @@
  * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
  * Description: Sort taxonomy terms, your way.
  * Author:      John James Jacoby
- * Version:     0.1.1
+ * Version:     0.1.2
  * Author URI:  https://profiles.wordpress.org/johnjamesjacoby/
  * License:     GPL v2 or later
  */
@@ -26,12 +26,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '0.1.1';
+	public $version = '0.1.2';
 
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 201508310001;
+	public $db_version = 201509210001;
 
 	/**
 	 * @var string Database version
@@ -162,8 +162,8 @@ final class WP_Term_Order {
 		if ( true === $this->fancy ) {
 			get_current_screen()->add_help_tab(array(
 				'id'      => 'wp_term_order_help_tab',
-				'title'   => __( 'Term Order' ),
-				'content' => '<p>' . __( 'To reposition an item, drag and drop the row by "clicking and holding" it anywhere and moving it to its new position.' ) . '</p>',
+				'title'   => __( 'Term Order', 'wp-term-order' ),
+				'content' => '<p>' . __( 'To reposition an item, drag and drop the row by "clicking and holding" it anywhere and moving it to its new position.', 'wp-term-order' ) . '</p>',
 			) );
 		} ?>
 
@@ -258,7 +258,7 @@ final class WP_Term_Order {
 	 * @return array
 	 */
 	public function add_column_header( $columns = array() ) {
-		$columns['order'] = __( 'Order', 'term-order' );
+		$columns['order'] = __( 'Order', 'wp-term-order' );
 
 		return $columns;
 	}
@@ -399,11 +399,11 @@ final class WP_Term_Order {
 
 		<div class="form-field form-required">
 			<label for="order">
-				<?php esc_html_e( 'Order' ); ?>
+				<?php esc_html_e( 'Order', 'wp-term-order' ); ?>
 			</label>
 			<input type="number" pattern="[0-9.]+" name="order" id="order" value="0" size="11">
 			<p class="description">
-				<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.' ); ?>
+				<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 			</p>
 		</div>
 
@@ -423,13 +423,13 @@ final class WP_Term_Order {
 		<tr class="form-field">
 			<th scope="row" valign="top">
 				<label for="order">
-					<?php esc_html_e( 'Order' ); ?>
+					<?php esc_html_e( 'Order', 'wp-term-order' ); ?>
 				</label>
 			</th>
 			<td>
 				<input name="order" id="order" type="text" value="<?php echo $this->get_term_order( $term ); ?>" size="11" />
 				<p class="description">
-					<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.' ); ?>
+					<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -454,7 +454,7 @@ final class WP_Term_Order {
 		<fieldset>
 			<div class="inline-edit-col">
 				<label>
-					<span class="title"><?php esc_html_e( 'Order' ); ?></span>
+					<span class="title"><?php esc_html_e( 'Order', 'wp-term-order' ); ?></span>
 					<span class="input-text-wrap">
 						<input type="number" pattern="[0-9.]+" class="ptitle" name="order" value="" size="11">
 					</span>
@@ -479,14 +479,14 @@ final class WP_Term_Order {
 
 		// Do not override if being manually controlled
 		if ( ! empty( $_GET['orderby'] ) && ! empty( $_GET['taxonomy'] ) ) {
-				return $orderby;
+			return $orderby;
 		}
 
 		// Maybe force `orderby`
 		if ( empty( $args['orderby'] ) || empty( $orderby ) || ( 'order' === $args['orderby'] ) || in_array( $orderby, array( 'name', 't.name' ) ) ) {
-				$orderby = 'tt.order';
+			$orderby = 'tt.order';
 		} elseif ( 't.name' === $orderby ) {
-				$orderby = 'tt.order, t.name';
+			$orderby = 'tt.order, t.name';
 		}
 
 		// Return possibly modified `orderby` value
