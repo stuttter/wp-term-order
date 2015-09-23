@@ -1,0 +1,17 @@
+{
+  "name": "stuttter/wp-term-order",
+  "description": "Sort taxonomy terms, your way",
+  "homepage": "https://github.com/stuttter/wp-term-order",
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=5.2",
+    "composer/installers": "^1.0"
+  },
+  "license": "GPLv2 or later",
+  "authors": [
+    {
+      "name": "John James Jacoby",
+      "email": "johnjamesjacoby@me.com"
+    }
+  ]
+}

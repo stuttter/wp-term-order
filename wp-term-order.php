@@ -3,7 +3,7 @@
 /**
  * Plugin Name: WP Term Order
  * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
- * Description: Sort taxonomy terms, your way.
+ * Description: Sort taxonomy terms, your way
  * Author:      John James Jacoby
  * Version:     0.1.2
  * Author URI:  https://profiles.wordpress.org/johnjamesjacoby/
