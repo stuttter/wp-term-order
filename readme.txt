@@ -16,8 +16,6 @@ WP Term Order allows users to order any visible category, tag, or taxonomy term 
 
 = Also checkout =
 
-= Also checkout =
-
 * [WP Chosen](https://wordpress.org/plugins/wp-chosen/ "Make long, unwieldy select boxes much more user-friendly.")
 * [WP Event Calendar](https://wordpress.org/plugins/wp-event-calendar/ "The best way to manage events in WordPress.")
 * [WP Term Meta](https://wordpress.org/plugins/wp-term-meta/ "Metadata, for taxonomy terms.")
