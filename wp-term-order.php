@@ -3,10 +3,10 @@
 /**
  * Plugin Name: WP Term Order
  * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
- * Description: Sort taxonomy terms, your way
  * Author:      John James Jacoby
- * Version:     0.1.2
  * Author URI:  https://profiles.wordpress.org/johnjamesjacoby/
+ * Version:     0.1.3
+ * Description: Sort taxonomy terms, your way
  * License:     GPL v2 or later
  */
 
@@ -26,12 +26,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '0.1.2';
+	public $version = '0.1.3';
 
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 201509210001;
+	public $db_version = 201510280001;
 
 	/**
 	 * @var string Database version
@@ -243,7 +243,10 @@ final class WP_Term_Order {
 		) );
 
 		// Get & return the taxonomies
-		return get_taxonomies( $r );
+		$taxonomies = get_taxonomies( $r );
+
+		// Filter taxonomies & return
+		return apply_filters( 'wp_term_order_get_taxonomies', $taxonomies, $r, $args );
 	}
 
 	/** Columns ***************************************************************/
