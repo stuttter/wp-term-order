@@ -3,7 +3,7 @@ Contributors: johnjamesjacoby, stuttter
 Tags: taxonomy, term, order
 Requires at least: 4.3
 Tested up to: 4.4
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9Q4F4EL5YJ62J
@@ -61,6 +61,9 @@ The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order
 http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
+
+= 0.1.4 =
+* Fix order saving in non-fancy mode
 
 = 0.1.3 =
 * Add filter to target specific taxonomies

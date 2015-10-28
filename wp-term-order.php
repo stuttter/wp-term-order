@@ -4,8 +4,8 @@
  * Plugin Name: WP Term Order
  * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
  * Author:      John James Jacoby
- * Author URI:  https://profiles.wordpress.org/johnjamesjacoby/
- * Version:     0.1.3
+ * Author URI:  https://jjj.me/
+ * Version:     0.1.4
  * Description: Sort taxonomy terms, your way
  * License:     GPL v2 or later
  */
@@ -26,12 +26,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '0.1.3';
+	public $version = '0.1.4';
 
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 201510280001;
+	public $db_version = 201510280002;
 
 	/**
 	 * @var string Database version
@@ -79,8 +79,8 @@ final class WP_Term_Order {
 
 		// Queries
 		add_filter( 'get_terms_orderby', array( $this, 'get_terms_orderby' ), 10, 2 );
-		add_action( 'create_term',       array( $this, 'add_term_order'    ), 10, 2 );
-		add_action( 'edit_term',         array( $this, 'add_term_order'    ), 10, 2 );
+		add_action( 'create_term',       array( $this, 'add_term_order'    ), 10, 3 );
+		add_action( 'edit_term',         array( $this, 'add_term_order'    ), 10, 3 );
 
 		// Get visible taxonomies
 		$taxonomies = $this->get_taxonomies();
@@ -306,10 +306,11 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param  int     $term_id
-	 * @param  string  $taxonomy
+	 * @param  int     $term_id   The ID of the term
+	 * @param  int     $tt_id     Not used
+	 * @param  string  $taxonomy  Taxonomy of the term
 	 */
-	public function add_term_order( $term_id = 0, $taxonomy = '' ) {
+	public function add_term_order( $term_id = 0, $tt_id = 0, $taxonomy = '' ) {
 
 		// Bail if not updating order
 		$order = ! empty( $_POST['order'] )
