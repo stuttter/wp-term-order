@@ -407,7 +407,7 @@ final class WP_Term_Order {
 			</label>
 			<input type="number" pattern="[0-9.]+" name="order" id="order" value="0" size="11">
 			<p class="description">
-				<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
+				<?php esc_html_e( 'Set a specific order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 			</p>
 		</div>
 
