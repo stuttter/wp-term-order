@@ -128,8 +128,8 @@ final class WP_Term_Order {
 	public function edit_tags() {
 
 		// Enqueue javascript
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-		add_action( 'admin_head',            array( $this, 'admin_head'      ) );
+		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'enqueue_scripts' ) );
+		add_action( 'admin_head-edit-tags.php',          array( $this, 'admin_head' ) );
 
 		// Quick edit
 		add_action( 'quick_edit_custom_box', array( $this, 'quick_edit_term_order' ), 10, 3 );
