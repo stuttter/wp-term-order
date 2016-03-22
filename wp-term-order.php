@@ -59,6 +59,11 @@ final class WP_Term_Order {
 	public $basename = '';
 
 	/**
+	 * @var array Which taxonomies are being targeted?
+	 */
+	public $taxonomies = array();
+
+	/**
 	 * @var boo Whether to use fancy ordering
 	 */
 	public $fancy = false;
@@ -83,10 +88,10 @@ final class WP_Term_Order {
 		add_action( 'edit_term',         array( $this, 'add_term_order'    ), 10, 3 );
 
 		// Get visible taxonomies
-		$taxonomies = $this->get_taxonomies();
+		$this->taxonomies = $this->get_taxonomies();
 
 		// Always hook these in, for ajax actions
-		foreach ( $taxonomies as $value ) {
+		foreach ( $this->taxonomies as $value ) {
 
 			// Unfancy gets the column
 			if ( false === $this->fancy ) {
@@ -127,9 +132,15 @@ final class WP_Term_Order {
 	 */
 	public function edit_tags() {
 
+		// Bail if taxonomy does not include colors
+		if ( empty( $GLOBALS['taxnow'] ) || ! in_array( $GLOBALS['taxnow'], $this->taxonomies, true ) ) {
+			return;
+		}
+
 		// Enqueue javascript
 		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_head-edit-tags.php',          array( $this, 'admin_head'      ) );
+		add_action( 'admin_head-edit-tags.php',          array( $this, 'help_tabs'       ) );
 
 		// Quick edit
 		add_action( 'quick_edit_custom_box', array( $this, 'quick_edit_term_order' ), 10, 3 );
@@ -152,20 +163,31 @@ final class WP_Term_Order {
 	}
 
 	/**
+	 * Contexutal help tabs
+	 *
+	 * @since 0.1.5
+	 */
+	public function help_tabs() {
+
+		// Add a helpful help tab
+		if ( false === $this->fancy ) {
+			return;
+		}
+
+		get_current_screen()->add_help_tab(array(
+			'id'      => 'wp_term_order_help_tab',
+			'title'   => __( 'Term Order', 'wp-term-order' ),
+			'content' => '<p>' . __( 'To reposition an item, drag and drop the row by "clicking and holding" it anywhere and moving it to its new position.', 'wp-term-order' ) . '</p>',
+		) );
+	}
+
+	/**
 	 * Align custom `order` column
 	 *
 	 * @since 0.1.0
 	 */
 	public function admin_head() {
-
-		// Add a helpful help tab
-		if ( true === $this->fancy ) {
-			get_current_screen()->add_help_tab(array(
-				'id'      => 'wp_term_order_help_tab',
-				'title'   => __( 'Term Order', 'wp-term-order' ),
-				'content' => '<p>' . __( 'To reposition an item, drag and drop the row by "clicking and holding" it anywhere and moving it to its new position.', 'wp-term-order' ) . '</p>',
-			) );
-		} ?>
+		?>
 
 		<style type="text/css">
 			.column-order {
@@ -451,7 +473,7 @@ final class WP_Term_Order {
 	public function quick_edit_term_order( $column_name = '', $screen = '', $name = '' ) {
 
 		// Bail if not the `order` column on the `edit-tags` screen for a visible taxonomy
-		if ( ( 'order' !== $column_name ) || ( 'edit-tags' !== $screen ) || ! in_array( $name, $this->get_taxonomies() ) ) {
+		if ( ( 'order' !== $column_name ) || ( 'edit-tags' !== $screen ) || ! in_array( $name, $this->taxonomies, true ) ) {
 			return false;
 		} ?>
 
