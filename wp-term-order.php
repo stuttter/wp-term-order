@@ -116,6 +116,9 @@ final class WP_Term_Order {
 				add_action( 'load-edit-tags.php', array( $this, 'edit_tags'  ) );
 			}
 		}
+
+		// Pass ths object into an action
+		do_action( 'wp_term_meta_order_init', $this );
 	}
 
 	/**
