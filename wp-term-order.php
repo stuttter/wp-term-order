@@ -332,7 +332,15 @@ final class WP_Term_Order {
 	 */
 	public function add_term_order( $term_id = 0, $tt_id = 0, $taxonomy = '' ) {
 
-		// Bail if not updating order
+		/*
+		 * Bail if order info hasn't been POSTed, like when the "Quick Edit"
+		 * form is used to update a term.
+		 */
+		if ( ! isset( $_POST['order'] ) ) {
+			return;
+		}
+
+		// Sanitize the value.
 		$order = ! empty( $_POST['order'] )
 			? (int) $_POST['order']
 			: 0;
