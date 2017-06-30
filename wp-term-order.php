@@ -146,6 +146,21 @@ final class WP_Term_Order {
 
 	/** Assets ****************************************************************/
 
+	public function taxonomy_supported( $taxonomy ) {
+
+		if ( is_array( $taxonomy ) ) {
+			foreach ( $taxonomy as $tax ) {
+				if ( ! in_array( $tax, $this->taxonomies ) ) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		return in_array( $taxonomy, $this->taxonomies );
+
+	}
+
 	/**
 	 * Enqueue quick-edit JS
 	 *
@@ -508,6 +523,10 @@ final class WP_Term_Order {
 	 * @return string
 	 */
 	public function get_terms_orderby( $orderby = 'name', $args = array() ) {
+
+		if ( ! $this->taxonomy_supported( $args['taxonomy'] ) ) {
+			return $orderby;
+		}
 
 		// Do not override if being manually controlled
 		if ( ! empty( $_GET['orderby'] ) && ! empty( $_GET['taxonomy'] ) ) {
