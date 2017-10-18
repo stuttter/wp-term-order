@@ -374,6 +374,8 @@ final class WP_Term_Order {
 			)
 		);
 
+		do_action( 'wp_term_order_set_term_order', $term_id, $taxonomy, $order );
+
 		// Maybe clean the term cache
 		if ( true === $clean_cache ) {
 			clean_term_cache( $term_id, $taxonomy );
