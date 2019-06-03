@@ -220,6 +220,7 @@ final class WP_Term_Order {
 			.wp-list-table .ui-sortable-helper {
 				background-color: #fff !important;
 				outline: 1px solid #bbb;
+				box-shadow: 0 3px 6px rgba(0, 0, 0, 0.175);
 			}
 			.wp-list-table .ui-sortable-helper .row-actions {
 				visibility: hidden;
