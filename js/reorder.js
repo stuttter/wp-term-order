@@ -9,7 +9,7 @@ sortable_terms_table.sortable( {
 	items:     '> tr:not(.no-items)',
 	cursor:    'move',
 	axis:      'y',
-	cancel: '  .inline-edit-row',
+	cancel:    '.inline-edit-row',
 	distance:  2,
 	opacity:   0.9,
 	tolerance: 'pointer',
