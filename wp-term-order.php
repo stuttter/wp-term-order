@@ -1,12 +1,11 @@
 <?php
-
 /**
  * Plugin Name: WP Term Order
- * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
- * Author:      John James Jacoby
- * Author URI:  https://jjj.blog/
- * Version:     0.1.4
- * Description: Sort taxonomy terms, your way
+ * Plugin URI:  https://github.com/ramonfincken/wp-term-order/tree/use_term_order
+ * Author:      Ramon Fincken ( https://www.mijnpress.nl ), John James Jacoby ( https://jjj.blog/ )
+ * Author URI:  https://github.com/ramonfincken/wp-term-order/tree/use_term_order
+ * Version:     0.1.5
+ * Description: Sort taxonomy terms, your way, using `term_order`
  * License:     GPL v2 or later
  */
 
@@ -26,7 +25,7 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '0.1.4';
+	public $version = '0.1.5';
 
 	/**
 	 * @var string Database version
@@ -35,6 +34,7 @@ final class WP_Term_Order {
 
 	/**
 	 * @var string Database version
+	 * @deprecated
 	 */
 	public $db_version_key = 'wpdb_term_taxonomy_version';
 
@@ -80,10 +80,12 @@ final class WP_Term_Order {
 		$this->url      = plugin_dir_url( $this->file );
 		$this->path     = plugin_dir_path( $this->file );
 		$this->basename = plugin_basename( $this->file );
-		$this->fancy    = apply_filters( 'wp_fancy_term_order', true );
+		$this->fancy    = apply_filters( 'wp_fancy_term_order', false );
+		$this->column    = apply_filters( 'wp_fancy_term_order_column', true );
+		$this->inline    = apply_filters( 'wp_fancy_term_order_inline', true );
 
 		// Queries
-		add_filter( 'get_terms_orderby', array( $this, 'get_terms_orderby' ), 10, 2 );
+		/// add_filter( 'get_terms_orderby', array( $this, 'get_terms_orderby' ), 10, 2 );
 		add_action( 'create_term',       array( $this, 'add_term_order'    ), 10, 3 );
 		add_action( 'edit_term',         array( $this, 'add_term_order'    ), 10, 3 );
 
@@ -92,9 +94,8 @@ final class WP_Term_Order {
 
 		// Always hook these in, for ajax actions
 		foreach ( $this->taxonomies as $value ) {
-
-			// Unfancy gets the column
-			if ( false === $this->fancy ) {
+		    
+		    if ( $this->column ) {
 				add_filter( "manage_edit-{$value}_columns",          array( $this, 'add_column_header' ) );
 				add_filter( "manage_{$value}_custom_column",         array( $this, 'add_column_value' ), 10, 3 );
 				add_filter( "manage_edit-{$value}_sortable_columns", array( $this, 'sortable_columns' ) );
@@ -129,7 +130,7 @@ final class WP_Term_Order {
 	public function admin_init() {
 
 		// Check for DB update
-		$this->maybe_upgrade_database();
+		/// $this->maybe_upgrade_database();
 	}
 
 	/**
@@ -141,7 +142,10 @@ final class WP_Term_Order {
 		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_head-edit-tags.php',          array( $this, 'admin_head'      ) );
 		add_action( 'admin_head-edit-tags.php',          array( $this, 'help_tabs'       ) );
-		add_action( 'quick_edit_custom_box',             array( $this, 'quick_edit_term_order' ), 10, 3 );
+		
+		if( $this->inline ) {
+            add_action( 'quick_edit_custom_box',             array( $this, 'quick_edit_term_order' ), 10, 3 );
+		}
 	}
 
 	/** Assets ****************************************************************/
@@ -299,7 +303,7 @@ final class WP_Term_Order {
 	 * @return mixed
 	 */
 	public function add_column_value( $empty = '', $custom_column = '', $term_id = 0 ) {
-
+	    
 		// Bail if no taxonomy passed or not on the `order` column
 		if ( empty( $_REQUEST['taxonomy'] ) || ( 'order' !== $custom_column ) || ! empty( $empty ) ) {
 			return;
@@ -365,13 +369,12 @@ final class WP_Term_Order {
 
 		// Update the database row
 		$wpdb->update(
-			$wpdb->term_taxonomy,
+			$wpdb->terms,
 			array(
-				'order' => $order
+				'term_order' => $order
 			),
 			array(
 				'term_id'  => $term_id,
-				'taxonomy' => $taxonomy
 			)
 		);
 
@@ -391,29 +394,15 @@ final class WP_Term_Order {
 	public function get_term_order( $term_id = 0 ) {
 
 		// Get the term, probably from cache at this point
-		$term = get_term( $term_id, $_REQUEST['taxonomy'] );
+	    // Dev note: $_REQUEST['taxonomy'] will be checked in isset with taxonomy_exists() so no need to sanitize this one
+	    $term = get_term( $term_id, $_REQUEST['taxonomy'] ); 
 
 		// Assume default order
 		$retval = 0;
 
-		// Use term order if set
-		if ( isset( $term->order ) ) {
-			$retval = $term->order;
-		}
-
-		// Check for option order
-		if ( empty( $retval ) ) {
-			$key    = "term_order_{$term->taxonomy}";
-			$orders = get_option( $key, array() );
-
-			if ( ! empty( $orders ) ) {
-				foreach ( $orders as $position => $value ) {
-					if ( $value === $term->term_id ) {
-						$retval = $position;
-						break;
-					}
-				}
-			}
+		// Use term_order column if set
+		if ( isset( $term->term_order ) ) {
+		    $retval = $term->term_order;
 		}
 
 		// Cast & return
@@ -434,7 +423,7 @@ final class WP_Term_Order {
 			<label for="order">
 				<?php esc_html_e( 'Order', 'wp-term-order' ); ?>
 			</label>
-			<input type="number" pattern="[0-9.]+" name="order" id="order" value="0" size="11">
+			<input type="number" pattern="[0-9.]+" name="order" id="order" value="<?php echo self::get_next_term_order(); ?>" size="11">
 			<p class="description">
 				<?php esc_html_e( 'Set a specific order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 			</p>
@@ -443,6 +432,29 @@ final class WP_Term_Order {
 		<?php
 	}
 
+	/**
+	 * Determines the next term_order for this taxonomy
+	 * 
+	 * @since 0.1.5
+	 * 
+	 * @param string $taxonomy
+	 * @return number
+	 */
+	private static function get_next_term_order( $taxonomy = '' ) {
+	    global $wpdb, $tax;
+	    
+	    $sql = $wpdb->prepare( 'SELECT MAX(term_order) FROM '.$wpdb->terms . ' WHERE term_id IN ( SELECT term_id FROM '.$wpdb->term_taxonomy . ' WHERE taxonomy = %s )', $tax->name );
+	    
+	    $the_max = $wpdb->get_var( $sql );
+	    if( $the_max && intval( $the_max ) >= 0 ) {
+	        // Increase by one
+	        return $the_max+1;
+	    }
+	    
+	    // No item yet?
+	    return 0;
+	}
+	
 	/**
 	 * Output the "order" form field when editing an existing term
 	 *
@@ -502,7 +514,7 @@ final class WP_Term_Order {
 
 	/**
 	 * Force `orderby` to `tt.order` if not explicitly set to something else
-	 *
+	 * @deprecated use 'orderby'    => 'term_order' in your get_terms()
 	 * @since 0.1.0
 	 *
 	 * @param  string $orderby
@@ -530,6 +542,7 @@ final class WP_Term_Order {
 
 	/**
 	 * Should a database update occur
+	 * @deprecated
 	 *
 	 * @since 0.1.0
 	 *
@@ -548,7 +561,8 @@ final class WP_Term_Order {
 
 	/**
 	 * Modify the `term_taxonomy` table and add an `order` column to it
-	 *
+	 * @deprecated
+	 * 
 	 * @since 0.1.0
 	 *
 	 * @param  int    $old_version
@@ -566,7 +580,7 @@ final class WP_Term_Order {
 		}
 
 		// Update the DB version
-		update_option( $this->db_version_key, $this->db_version );
+		update_option( $this->db_version_key, $this->db_version, false );
 	}
 
 	/** Admin Ajax ************************************************************/
@@ -586,6 +600,7 @@ final class WP_Term_Order {
 		}
 
 		// Attempt to get the taxonomy
+		// Dev note: $_POST['tax'] will be checked in isset with taxonomy_exists() so no need to sanitize this one
 		$tax = get_taxonomy( $_POST['tax'] );
 
 		// Bail if taxonomy does not exist
@@ -651,7 +666,7 @@ final class WP_Term_Order {
 			'depth'      => 1,
 			'number'     => 100,
 			'parent'     => $parent_id,
-			'orderby'    => 'order',
+			'orderby'    => 'term_order',
 			'order'      => 'ASC',
 			'hide_empty' => false,
 			'exclude'    => $excluded
@@ -673,7 +688,7 @@ final class WP_Term_Order {
 				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
 
 				$new_pos[ $term->term_id ] = array(
-					'order'  => $start,
+					'order'  => $start, // Internal
 					'parent' => $parent_id,
 					'depth'  => count( $ancestors ),
 				);
@@ -702,7 +717,7 @@ final class WP_Term_Order {
 				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
 
 				$new_pos[ $term->term_id ] = array(
-					'order'  => $start,
+					'order'  => $start, // Internal
 					'parent' => $parent_id,
 					'depth'  => count( $ancestors )
 				);
@@ -731,7 +746,7 @@ final class WP_Term_Order {
 			$children = get_terms( $taxonomy, array(
 				'number'     => 1,
 				'depth'      => 1,
-				'orderby'    => 'order',
+				'orderby'    => 'term_order',
 				'order'      => 'ASC',
 				'parent'     => $term->term_id,
 				'fields'     => 'ids',
