@@ -76,7 +76,7 @@ final class WP_Term_Order {
 	/**
 	 * @var bool Whether to use inline editing
 	 */
-	public $inline = true;
+	public $inline = false;
 
 	/**
 	 * Hook into queries, admin screens, and more!
@@ -91,11 +91,11 @@ final class WP_Term_Order {
 		$this->path     = plugin_dir_path( $this->file );
 		$this->basename = plugin_basename( $this->file );
 		$this->fancy    = apply_filters( 'wp_fancy_term_order', true );
-		$this->column    = apply_filters( 'wp_fancy_term_order_column', true );
-		$this->inline    = apply_filters( 'wp_fancy_term_order_inline', true );
+		$this->column    = apply_filters( 'wp_fancy_term_order_column', false );
+		$this->inline    = apply_filters( 'wp_fancy_term_order_inline', false );
 
 		// Queries
-		/// add_filter( 'get_terms_orderby', array( $this, 'get_terms_orderby' ), 10, 2 );
+		add_filter( 'get_terms_orderby', array( $this, 'get_terms_orderby' ), 10, 2 );
 		add_action( 'create_term',       array( $this, 'add_term_order'    ), 10, 3 );
 		add_action( 'edit_term',         array( $this, 'add_term_order'    ), 10, 3 );
 
@@ -296,7 +296,7 @@ final class WP_Term_Order {
 	 * @return array
 	 */
 	public function add_column_header( $columns = array() ) {
-		$columns['order'] = __( 'Order', 'wp-term-order' );
+		$columns['term_order'] = __( 'Order', 'wp-term-order' );
 
 		return $columns;
 	}
@@ -315,7 +315,7 @@ final class WP_Term_Order {
 	public function add_column_value( $empty = '', $custom_column = '', $term_id = 0 ) {
 	    
 		// Bail if no taxonomy passed or not on the `order` column
-		if ( empty( $_REQUEST['taxonomy'] ) || ( 'order' !== $custom_column ) || ! empty( $empty ) ) {
+		if ( empty( $_REQUEST['taxonomy'] ) || ( 'term_order' !== $custom_column ) || ! empty( $empty ) ) {
 			return;
 		}
 
@@ -332,7 +332,7 @@ final class WP_Term_Order {
 	 * @return array
 	 */
 	public function sortable_columns( $columns = array() ) {
-		$columns['order'] = 'order';
+		$columns['term_order'] = 'term_order';
 		return $columns;
 	}
 
@@ -538,8 +538,8 @@ final class WP_Term_Order {
 		}
 
 		// Maybe force `orderby`
-		if ( empty( $args['orderby'] ) || empty( $orderby ) || ( 'order' === $args['orderby'] ) || in_array( $orderby, array( 'name', 't.name' ) ) ) {
-			$orderby = 'tt.order';
+		if ( empty( $args['orderby'] ) || empty( $orderby ) || ( 'term_order' === $args['orderby'] ) || in_array( $orderby, array( 'name', 't.name' ) ) ) {
+			$orderby = 't.term_order ';
 		} elseif ( 't.name' === $orderby ) {
 			$orderby = 'tt.order, t.name';
 		}
@@ -681,7 +681,7 @@ final class WP_Term_Order {
 			'hide_empty' => false,
 			'exclude'    => $excluded
 		) );
-
+		
 		// Loop through siblings and update terms
 		foreach ( $siblings as $sibling ) {
 
