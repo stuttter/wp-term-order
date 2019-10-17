@@ -1,6 +1,6 @@
 # WP Term Order
 
-Sort taxonomy terms, your way.
+Sort taxonomy terms. This is a adapted fork from JJJ by RamonFincken. This for uses the WP Core `term_order` column in the `terms` table, instead of creating a new colum in the `wp_term_taxonomy` table.
 
 WP Term Order allows users to order any visible category, tag, or taxonomy term numerically, providing a customized order for their taxonomy terms.
 
@@ -22,7 +22,7 @@ No. There are no new database tables with this plugin.
 
 ### Does this modify existing database tables?
 
-Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
+No. It uses the WP Core `term_order` colum in the `terms` table
 
 ### Can I query and sort by `order`?
 
@@ -33,20 +33,15 @@ $terms = get_terms( 'category', array(
 	'depth'      => 1,
 	'number'     => 100,
 	'parent'     => 0,
-	'orderby'    => 'order', // <--- Looky looky!
+	'orderby'    => 'term_order', // <--- Looky looky!
 	'order'      => 'ASC',
 	'hide_empty' => false,
-
-	// Try the "wp-term-meta" plugin!
-	'meta_query' => array( array(
-		'key' => 'term_thumbnail'
-	) )
 ) );
 ```
 
 ### Where can I get support?
 
-The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/
+Github
 
 ### Can I contribute?
 
