@@ -66,7 +66,7 @@ final class WP_Term_Order {
 	/**
 	 * @var bool Whether to use fancy ordering
 	 */
-	public $fancy = false;
+	public $fancy = true;
 	
 	/**
 	 * @var bool Whether to show the column
@@ -90,7 +90,7 @@ final class WP_Term_Order {
 		$this->url      = plugin_dir_url( $this->file );
 		$this->path     = plugin_dir_path( $this->file );
 		$this->basename = plugin_basename( $this->file );
-		$this->fancy    = apply_filters( 'wp_fancy_term_order', false );
+		$this->fancy    = apply_filters( 'wp_fancy_term_order', true );
 		$this->column    = apply_filters( 'wp_fancy_term_order_column', true );
 		$this->inline    = apply_filters( 'wp_fancy_term_order_inline', true );
 
