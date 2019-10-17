@@ -64,9 +64,19 @@ final class WP_Term_Order {
 	public $taxonomies = array();
 
 	/**
-	 * @var boo Whether to use fancy ordering
+	 * @var bool Whether to use fancy ordering
 	 */
 	public $fancy = false;
+	
+	/**
+	 * @var bool Whether to show the column
+	 */
+	public $column = true;
+	
+	/**
+	 * @var bool Whether to use inline editing
+	 */
+	public $inline = true;
 
 	/**
 	 * Hook into queries, admin screens, and more!

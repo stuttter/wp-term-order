@@ -1,6 +1,6 @@
 # WP Term Order
 
-Sort taxonomy terms. This is a adapted fork from JJJ by RamonFincken. This fork uses the WP Core `term_order` column in the `terms` table, instead of creating a new colum in the `wp_term_taxonomy` table.
+Sort taxonomy terms. This is an adapted fork from JJJ by RamonFincken. This fork uses the WP Core `term_order` column in the `terms` table, instead of creating a new colum in the `wp_term_taxonomy` table.
 
 WP Term Order allows users to order any visible category, tag, or taxonomy term numerically, providing a customized order for their taxonomy terms.
 
