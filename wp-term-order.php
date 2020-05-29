@@ -1,13 +1,15 @@
 <?php
 
 /**
- * Plugin Name: WP Term Order
- * Plugin URI:  https://wordpress.org/plugins/wp-term-order/
- * Author:      John James Jacoby
- * Author URI:  https://jjj.blog/
- * Version:     0.1.4
- * Description: Sort taxonomy terms, your way
- * License:     GPL v2 or later
+ * Plugin Name:       WP Term Order
+ * Plugin URI:        https://wordpress.org/plugins/wp-term-order/
+ * Author:            John James Jacoby
+ * Author URI:        https://jjj.blog/
+ * Version:           0.1.4
+ * Description:       Sort taxonomy terms, your way
+ * License:           GPL v2 or later
+ * Requires PHP:      5.6.20
+ * Requires at least: 4.3
  */
 
 // Exit if accessed directly
