@@ -58,6 +58,9 @@ http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
 
+= 0.1.5 =
+* Version bumps and updated readme
+
 = 0.1.4 =
 * Fix order saving in non-fancy mode
 
