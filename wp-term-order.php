@@ -3,9 +3,10 @@
 /**
  * Plugin Name:       WP Term Order
  * Plugin URI:        https://wordpress.org/plugins/wp-term-order/
+ * Description:       Sort taxonomy terms, your way
  * Author:            John James Jacoby
  * Author URI:        https://jjj.blog/
- * Description:       Sort taxonomy terms, your way
+ * Text Domain:       wp-term-order
  * License:           GPL v2 or later
  * Requires PHP:      5.6.20
  * Requires at least: 4.3
