@@ -5,11 +5,11 @@
  * Plugin URI:        https://wordpress.org/plugins/wp-term-order/
  * Author:            John James Jacoby
  * Author URI:        https://jjj.blog/
- * Version:           0.1.5
  * Description:       Sort taxonomy terms, your way
  * License:           GPL v2 or later
  * Requires PHP:      5.6.20
  * Requires at least: 4.3
+ * Version:           1.0.0
  */
 
 // Exit if accessed directly
@@ -28,12 +28,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '0.1.5';
+	public $version = '1.0.0';
 
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 201510280002;
+	public $db_version = 202007300001;
 
 	/**
 	 * @var string Database version
@@ -348,6 +348,7 @@ final class WP_Term_Order {
 			? (int) $_POST['order']
 			: 0;
 
+		// No cache clean required
 		self::set_term_order( $term_id, $taxonomy, $order );
 	}
 
@@ -365,8 +366,13 @@ final class WP_Term_Order {
 	public static function set_term_order( $term_id = 0, $taxonomy = '', $order = 0, $clean_cache = false ) {
 		global $wpdb;
 
-		// Update the database row
-		$wpdb->update(
+		/*
+		 * Update the database row
+		 *
+		 * We cannot call wp_update_term() here because it would cause recursion,
+		 * and also the database columns are hardcoded and we can't modify them.
+		 */
+		$success = $wpdb->update(
 			$wpdb->term_taxonomy,
 			array(
 				'order' => $order
@@ -377,11 +383,15 @@ final class WP_Term_Order {
 			)
 		);
 
-		do_action( 'wp_term_order_set_term_order', $term_id, $taxonomy, $order );
+		// Only execute action and clean cache when update succeeds
+		if ( ! empty( $success ) ) {
 
-		// Maybe clean the term cache
-		if ( true === $clean_cache ) {
-			clean_term_cache( $term_id, $taxonomy );
+			do_action( 'wp_term_order_set_term_order', $term_id, $taxonomy, $order );
+
+			// Maybe clean the term cache
+			if ( true === $clean_cache ) {
+				clean_term_cache( $term_id, $taxonomy );
+			}
 		}
 	}
 

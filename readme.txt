@@ -1,12 +1,12 @@
 === WP Term Order ===
-Contributors: johnjamesjacoby, stuttter
-Tags: taxonomy, term, order
+Contributors:      johnjamesjacoby, stuttter
+Tags:              taxonomy, term, order
+License:           GPLv2 or later
+License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+Donate link:       https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9Q4F4EL5YJ62J
 Requires at least: 4.3
-Tested up to: 5.4
-Stable tag: 0.1.4
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
-Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9Q4F4EL5YJ62J
+Tested up to:      5.5
+Stable tag:        1.0.0
 
 == Description ==
 
@@ -57,6 +57,9 @@ The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order
 http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
+
+= 1.0.0 =
+* Do action when order is updated
 
 = 0.1.5 =
 * Version bumps and updated readme
