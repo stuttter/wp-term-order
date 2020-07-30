@@ -29,7 +29,8 @@ Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
 Yes. Use it like:
 
 ```
-$terms = get_terms( 'category', array(
+$terms = get_terms( array(
+	'taxonomy'   => 'category',
 	'depth'      => 1,
 	'number'     => 100,
 	'parent'     => 0,
