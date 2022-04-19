@@ -458,9 +458,21 @@ final class WP_Term_Order {
 	 * @since 0.1.0
 	 */
 	public static function term_order_add_form_field() {
+		$classes = array(
+			'form-field',
+			'form-required',
+			'wp-term-order-form-field',
+		);
+
+		/**
+		 * Allows filtering HTML classes on the wrapper of the "order" form field shown when adding a new term.
+		 *
+		 * @param array $classes
+		 */
+		$classes = apply_filters( 'wp_term_order_add_form_field_classes', $classes );
 		?>
 
-		<div class="form-field form-required">
+		<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
 			<label for="order">
 				<?php esc_html_e( 'Order', 'wp-term-order' ); ?>
 			</label>
@@ -481,9 +493,20 @@ final class WP_Term_Order {
 	 * @param object $term
 	 */
 	public function term_order_edit_form_field( $term = false ) {
+		$classes = array(
+			'form-field',
+			'wp-term-order-form-field',
+		);
+
+		/**
+		 * Allows filtering HTML classes on the wrapper of the "order" form field shown when editing an existing term.
+		 *
+		 * @param array $classes
+		 */
+		$classes = apply_filters( 'wp_term_order_edit_form_field_classes', $classes );
 		?>
 
-		<tr class="form-field">
+		<tr class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
 			<th scope="row" valign="top">
 				<label for="order">
 					<?php esc_html_e( 'Order', 'wp-term-order' ); ?>
@@ -512,10 +535,24 @@ final class WP_Term_Order {
 		// Bail if not the `order` column on the `edit-tags` screen for a visible taxonomy
 		if ( ( 'order' !== $column_name ) || ( 'edit-tags' !== $screen ) || ! in_array( $name, $this->taxonomies, true ) ) {
 			return false;
-		} ?>
+		}
+
+		$classes = array(
+			'inline-edit-col',
+			'wp-term-order-col',
+		);
+
+		/**
+		 * Allows filtering HTML classes on the wrapper of the "order" quick-edit field.
+		 *
+		 * @param array $classes
+		 */
+		$classes = apply_filters( 'wp_term_order_quick_edit_field_classes', $classes );
+
+		?>
 
 		<fieldset>
-			<div class="inline-edit-col">
+			<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
 				<label>
 					<span class="title"><?php esc_html_e( 'Order', 'wp-term-order' ); ?></span>
 					<span class="input-text-wrap">
