@@ -457,7 +457,7 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 */
-	public static function term_order_add_form_field() {
+	public function term_order_add_form_field() {
 		?>
 
 		<div class="form-field form-required">
@@ -790,6 +790,8 @@ endif;
  * @since 0.1.0
  */
 function _wp_term_order() {
-	new WP_Term_Order();
+	global $wp_term_order;
+
+	$wp_term_order = new WP_Term_Order();
 }
 add_action( 'init', '_wp_term_order', 99 );
