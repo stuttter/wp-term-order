@@ -539,7 +539,7 @@ final class WP_Term_Order {
 
 		$classes = array(
 			'inline-edit-col',
-			'wp-term-order-col',
+			'wp-term-order-edit-col',
 		);
 
 		/**
