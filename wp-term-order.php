@@ -122,11 +122,11 @@ final class WP_Term_Order {
 		add_action( 'wp_ajax_reordering_terms', array( $this, 'ajax_reordering_terms' ) );
 
 		// Only blog admin screens
-		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) ) {
+		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
 			add_action( 'admin_init', array( $this, 'admin_init' ) );
 
 			// Bail if taxonomy does not include colors
-			if ( ! empty( $_REQUEST['taxonomy'] ) && $this->taxonomy_supported( $_REQUEST['taxonomy'] ) ) {
+			if ( ! empty( $_REQUEST['taxonomy'] ) && $this->taxonomy_supported( $_REQUEST['taxonomy'] ) && ! defined( 'WP_CLI' ) ) {
 				add_action( 'load-edit-tags.php', array( $this, 'edit_tags' ) );
 			}
 		}
