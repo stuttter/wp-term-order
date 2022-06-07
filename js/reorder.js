@@ -28,6 +28,10 @@ sortable_terms_table.sortable( {
 			inlineEditTax.revert();
 		}
 
+		if ( jQuery( '.wp-list-table tbody tr td.column-order.hidden' ).length ) {
+			ui.placeholder.children().last().remove();
+		}
+
 		ui.placeholder.height( ui.item.height() );
 		ui.item.parent().parent().addClass( 'dragging' );
 	},
@@ -106,58 +110,22 @@ sortable_terms_table.sortable( {
  */
 function term_order_update_callback( response ) {
 
+	// Bail if term has children
 	if ( 'children' === response ) {
 		window.location.reload();
 		return;
 	}
 
+	// Parse the response
 	var changes = jQuery.parseJSON( response ),
 		new_pos = changes.new_pos;
 
+	// Empty out order text
 	for ( var key in new_pos ) {
-
-		if ( 'next' === key ) {
-			continue;
-		}
-
-		var inline_key = document.getElementById( 'inline_' + key );
-
-		if ( null !== inline_key && new_pos.hasOwnProperty( key ) ) {
-			var dom_order = inline_key.querySelector( '.order' );
-
-			if ( undefined !== new_pos[ key ]['order'] ) {
-				if ( null !== dom_order ) {
-					dom_order.innerHTML = new_pos[ key ]['order'];
-				}
-
-				var dom_term_parent = inline_key.querySelector( '.parent' );
-				if ( null !== dom_term_parent ) {
-					dom_term_parent.innerHTML = new_pos[ key ]['parent'];
-				}
-
-				var term_title     = null,
-					dom_term_title = inline_key.querySelector( '.row-title' );
-				if ( null !== dom_term_title ) {
-					term_title = dom_term_title.innerHTML;
-				}
-
-				var dashes = 0;
-				while ( dashes < new_pos[ key ]['depth'] ) {
-					//term_title = '&mdash; ' + term_title;
-					dashes++;
-				}
-
-				var dom_row_title = inline_key.parentNode.querySelector( '.row-title' );
-				if ( null !== dom_row_title && null !== term_title ) {
-					//dom_row_title.innerHTML = term_title;
-				}
-
-			} else if ( null !== dom_order ) {
-				dom_order.innerHTML = new_pos[ key ];
-			}
-		}
+		jQuery( '#tag-' + key + ' td.order' ).html( '&mdash;' );
 	}
 
+	// Maybe repost the next change
 	if ( changes.next ) {
 		jQuery.post( ajaxurl, {
 			action:  'reordering_terms',
@@ -168,12 +136,20 @@ function term_order_update_callback( response ) {
 			excluded: changes.next['excluded'],
 			tax:      taxonomy
 		}, term_order_update_callback );
+
+	// Clean up
 	} else {
-
-		setTimeout( function() {
-			jQuery( '.to-row-updating' ).removeClass( 'to-row-updating' );
-		}, 500 );
-
 		sortable_terms_table.removeClass( 'to-updating' ).sortable( 'enable' );
 	}
+
+	// Update and more clean-up
+	setTimeout( function() {
+		jQuery( '.to-row-updating' ).removeClass( 'to-row-updating' );
+
+		// Update order text
+		for ( var key in new_pos ) {
+			jQuery( '#tag-' + key + ' td.order' ).html( new_pos[ key ]['order'] );
+		}
+
+	}, 500 );
 }
