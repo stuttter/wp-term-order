@@ -9,8 +9,8 @@
  * Text Domain:       wp-term-order
  * License:           GPL v2 or later
  * Requires PHP:      5.6.20
- * Requires at least: 4.3
- * Version:           1.0.0
+ * Requires at least: 5.3
+ * Version:           1.1.0
  */
 
 // Exit if accessed directly
@@ -29,7 +29,7 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '1.0.0';
+	public $version = '1.1.0';
 
 	/**
 	 * @var string Database version
@@ -72,11 +72,20 @@ final class WP_Term_Order {
 	public $fancy = false;
 
 	/**
-	 * Hook into queries, admin screens, and more!
+	 * Empty constructor
 	 *
 	 * @since 0.1.0
 	 */
 	public function __construct() {
+		// Intentionally empty
+	}
+
+	/**
+	 * Hook into queries, admin screens, and more!
+	 *
+	 * @since 1.0.0
+	 */
+	public function init() {
 
 		// Setup plugin
 		$this->file     = __FILE__;
@@ -97,14 +106,16 @@ final class WP_Term_Order {
 		foreach ( $this->taxonomies as $value ) {
 
 			// Unfancy gets the column
-			if ( false === $this->fancy ) {
-				add_filter( "manage_edit-{$value}_columns",          array( $this, 'add_column_header' ) );
-				add_filter( "manage_{$value}_custom_column",         array( $this, 'add_column_value' ), 10, 3 );
-				add_filter( "manage_edit-{$value}_sortable_columns", array( $this, 'sortable_columns' ) );
-			}
+			add_filter( "manage_edit-{$value}_columns",          array( $this, 'add_column_header' ) );
+			add_filter( "manage_{$value}_custom_column",         array( $this, 'add_column_value' ), 10, 3 );
+			add_filter( "manage_edit-{$value}_sortable_columns", array( $this, 'sortable_columns' ) );
 
 			add_action( "{$value}_add_form_fields",  array( $this, 'term_order_add_form_field'  ) );
 			add_action( "{$value}_edit_form_fields", array( $this, 'term_order_edit_form_field' ) );
+		}
+
+		if ( false !== $this->fancy ) {
+			add_filter( 'default_hidden_columns', array( $this, 'hidden_columns' ), 10, 2 );
 		}
 
 		// Ajax actions
@@ -115,13 +126,13 @@ final class WP_Term_Order {
 			add_action( 'admin_init', array( $this, 'admin_init' ) );
 
 			// Bail if taxonomy does not include colors
-			if ( ! empty( $_REQUEST['taxonomy'] ) && in_array( $_REQUEST['taxonomy'], $this->taxonomies, true ) ) {
-				add_action( 'load-edit-tags.php', array( $this, 'edit_tags'  ) );
+			if ( ! empty( $_REQUEST['taxonomy'] ) && $this->taxonomy_supported( $_REQUEST['taxonomy'] ) ) {
+				add_action( 'load-edit-tags.php', array( $this, 'edit_tags' ) );
 			}
 		}
 
-		// Pass ths object into an action
-		do_action( 'wp_term_meta_order_init', $this );
+		// Pass this object into an action
+		do_action_ref_array( 'wp_term_meta_order_init', array( &$this ) );
 	}
 
 	/**
@@ -149,19 +160,28 @@ final class WP_Term_Order {
 
 	/** Assets ****************************************************************/
 
-	public function taxonomy_supported( $taxonomy ) {
+	/**
+	 * Check if a taxonomy supports ordering its terms.
+	 *
+	 * @since 1.0.0
+	 * @param array $taxonomy
+	 * @return bool
+	 */
+	public function taxonomy_supported( $taxonomy = array() ) {
+
+		if ( is_string( $taxonomy ) ) {
+			$taxonomy = (array) $taxonomy;
+		}
 
 		if ( is_array( $taxonomy ) ) {
 			foreach ( $taxonomy as $tax ) {
-				if ( ! in_array( $tax, $this->taxonomies ) ) {
+				if ( ! in_array( $tax, $this->taxonomies, true ) ) {
 					return false;
 				}
 			}
-			return true;
 		}
 
-		return in_array( $taxonomy, $this->taxonomies );
-
+		return true;
 	}
 
 	/**
@@ -179,7 +199,7 @@ final class WP_Term_Order {
 	}
 
 	/**
-	 * Contexutal help tabs
+	 * Contextual help tabs
 	 *
 	 * @since 0.1.5
 	 */
@@ -240,6 +260,7 @@ final class WP_Term_Order {
 				outline: 1px solid #bbb;
 				box-shadow: 0 3px 6px rgba(0, 0, 0, 0.175);
 			}
+			.wp-list-table .to-row-updating .row-actions,
 			.wp-list-table .ui-sortable-helper .row-actions {
 				visibility: hidden;
 			}
@@ -274,7 +295,7 @@ final class WP_Term_Order {
 	 * @param array $args
 	 * @return array
 	 */
-	private static function get_taxonomies( $args = array() ) {
+	private function get_taxonomies( $args = array() ) {
 
 		// Parse arguments
 		$r = wp_parse_args( $args, array(
@@ -285,7 +306,7 @@ final class WP_Term_Order {
 		$taxonomies = get_taxonomies( $r );
 
 		// Filter taxonomies & return
-		return apply_filters( 'wp_term_order_get_taxonomies', $taxonomies, $r, $args );
+		return (array) apply_filters( 'wp_term_order_get_taxonomies', $taxonomies, $r, $args );
 	}
 
 	/** Columns ***************************************************************/
@@ -337,6 +358,28 @@ final class WP_Term_Order {
 	 */
 	public function sortable_columns( $columns = array() ) {
 		$columns['order'] = 'order';
+		return $columns;
+	}
+
+	/**
+	 * Add `order` to hidden columns
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param array     $columns
+	 * @param WP_Screen $screen
+	 *
+	 * @return array
+	 */
+	public function hidden_columns( $columns = array(), $screen = '' ) {
+
+		// Bail if not on the `edit-tags` screen for a visible taxonomy
+		if ( ( 'edit-tags' !== $screen->base ) || ! $this->taxonomy_supported( $screen->taxonomy ) ) {
+			return $columns;
+		}
+
+		$columns[] = 'order';
+
 		return $columns;
 	}
 
@@ -457,7 +500,9 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 */
-	public static function term_order_add_form_field() {
+	public function term_order_add_form_field() {
+
+		// Default classes
 		$classes = array(
 			'form-field',
 			'form-required',
@@ -465,11 +510,13 @@ final class WP_Term_Order {
 		);
 
 		/**
-		 * Allows filtering HTML classes on the wrapper of the "order" form field shown when adding a new term.
+		 * Allows filtering HTML classes on the wrapper of the "order" form
+		 * field shown when adding a new term.
 		 *
 		 * @param array $classes
 		 */
-		$classes = apply_filters( 'wp_term_order_add_form_field_classes', $classes );
+		$classes = (array) apply_filters( 'wp_term_order_add_form_field_classes', $classes, $this );
+
 		?>
 
 		<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
@@ -493,17 +540,21 @@ final class WP_Term_Order {
 	 * @param object $term
 	 */
 	public function term_order_edit_form_field( $term = false ) {
+
+		// Default classes
 		$classes = array(
 			'form-field',
 			'wp-term-order-form-field',
 		);
 
 		/**
-		 * Allows filtering HTML classes on the wrapper of the "order" form field shown when editing an existing term.
+		 * Allows filtering HTML classes on the wrapper of the "order" form
+		 * field shown when editing an existing term.
 		 *
 		 * @param array $classes
 		 */
-		$classes = apply_filters( 'wp_term_order_edit_form_field_classes', $classes );
+		$classes = (array) apply_filters( 'wp_term_order_edit_form_field_classes', $classes, $this );
+
 		?>
 
 		<tr class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
@@ -528,26 +579,30 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param  $term
+	 * @param string $column_name
+	 * @param string $screen
+	 * @param string $name
 	 */
 	public function quick_edit_term_order( $column_name = '', $screen = '', $name = '' ) {
 
 		// Bail if not the `order` column on the `edit-tags` screen for a visible taxonomy
-		if ( ( 'order' !== $column_name ) || ( 'edit-tags' !== $screen ) || ! in_array( $name, $this->taxonomies, true ) ) {
+		if ( ( 'order' !== $column_name ) || ( 'edit-tags' !== $screen ) || ! $this->taxonomy_supported( $name ) ) {
 			return false;
 		}
 
+		// Default classes
 		$classes = array(
 			'inline-edit-col',
 			'wp-term-order-edit-col',
 		);
 
 		/**
-		 * Allows filtering HTML classes on the wrapper of the "order" quick-edit field.
+		 * Allows filtering HTML classes on the wrapper of the "order"
+		 * quick-edit field.
 		 *
 		 * @param array $classes
 		 */
-		$classes = apply_filters( 'wp_term_order_quick_edit_field_classes', $classes );
+		$classes = (array) apply_filters( 'wp_term_order_quick_edit_field_classes', $classes, $this );
 
 		?>
 
@@ -573,21 +628,23 @@ final class WP_Term_Order {
 	 * @since 0.1.0
 	 *
 	 * @param  string $orderby
+	 * @param  array  $args
 	 * @return string
 	 */
 	public function get_terms_orderby( $orderby = 'name', $args = array() ) {
 
+		// Bail if taxonomy not supported
 		if ( ! $this->taxonomy_supported( $args['taxonomy'] ) ) {
 			return $orderby;
 		}
 
-		// Do not override if being manually controlled
+		// Bail if being manually controlled
 		if ( ! empty( $_GET['orderby'] ) && ! empty( $_GET['taxonomy'] ) ) {
 			return $orderby;
 		}
 
 		// Maybe force `orderby`
-		if ( empty( $args['orderby'] ) || empty( $orderby ) || ( 'order' === $args['orderby'] ) || in_array( $orderby, array( 'name', 't.name' ) ) ) {
+		if ( empty( $args['orderby'] ) || empty( $orderby ) || ( 'order' === $args['orderby'] ) || in_array( $orderby, array( 'name', 't.name' ), true ) ) {
 			$orderby = 'tt.order';
 		} elseif ( 't.name' === $orderby ) {
 			$orderby = 'tt.order, t.name';
@@ -643,7 +700,7 @@ final class WP_Term_Order {
 	/** Admin Ajax ************************************************************/
 
 	/**
-	 * Handle ajax term reordering
+	 * Handle AJAX term reordering
 	 *
 	 * This bit is inspired by the Simple Page Ordering plugin from 10up
 	 *
@@ -725,7 +782,7 @@ final class WP_Term_Order {
 			'orderby'    => 'order',
 			'order'      => 'ASC',
 			'hide_empty' => false,
-			'exclude'    => $excluded
+			'exclude'    => array_unique( $excluded )
 		) );
 
 		// Loop through siblings and update terms
@@ -750,6 +807,8 @@ final class WP_Term_Order {
 				);
 
 				$start++;
+			} else {
+				$ancestors = array();
 			}
 
 			// If repositioned term has been set and new items are already in
@@ -764,7 +823,12 @@ final class WP_Term_Order {
 				self::set_term_order( $sibling->term_id, $taxonomy, $start, true );
 			}
 
-			$new_pos[ $sibling->term_id ] = $start;
+			$new_pos[ $sibling->term_id ] = array(
+				'order'  => $start,
+				'parent' => $parent_id,
+				'depth'  => count( $ancestors )
+			);
+
 			$start++;
 
 			if ( empty( $nextid ) && ( $previd === (int) $sibling->term_id ) ) {
@@ -775,10 +839,12 @@ final class WP_Term_Order {
 				$new_pos[ $term->term_id ] = array(
 					'order'  => $start,
 					'parent' => $parent_id,
-					'depth'  => count( $ancestors )
+					'depth'  => count( $ancestors ),
 				);
 
 				$start++;
+			} else {
+				$ancestors = array();
 			}
 		}
 
@@ -789,7 +855,7 @@ final class WP_Term_Order {
 				'previd'   => $previd,
 				'nextid'   => $nextid,
 				'start'    => $start,
-				'excluded' => array_merge( array_keys( $new_pos ), $excluded ),
+				'excluded' => array_unique( array_merge( array_keys( $new_pos ), $excluded ) ),
 				'taxonomy' => $taxonomy
 			);
 		} else {
@@ -827,6 +893,13 @@ endif;
  * @since 0.1.0
  */
 function _wp_term_order() {
-	new WP_Term_Order();
+	static $wp_term_order = null;
+
+	if ( is_null( $wp_term_order ) ) {
+		$wp_term_order = new WP_Term_Order();
+		$wp_term_order->init();
+	}
+
+	return $wp_term_order;
 }
 add_action( 'init', '_wp_term_order', 99 );
