@@ -117,12 +117,21 @@ function term_order_update_callback( response ) {
 	}
 
 	// Parse the response
-	var changes = jQuery.parseJSON( response ),
+	var changes = JSON.parse( response ),
 		new_pos = changes.new_pos;
 
-	// Empty out order text
+	// Empty out order texts
 	for ( var key in new_pos ) {
-		jQuery( '#tag-' + key + ' td.order' ).html( '&mdash;' );
+
+		// Get numbers
+		var element = jQuery( '#tag-' + key + ' td.order' ),
+			updated = Number( new_pos[ key ]['order'] ),
+			current = Number( element.html() );
+
+		// Only empty if changing
+		if ( updated !== current ) {
+			element.html( '&mdash;' );
+		}
 	}
 
 	// Maybe repost the next change
@@ -148,7 +157,9 @@ function term_order_update_callback( response ) {
 
 		// Update order text
 		for ( var key in new_pos ) {
-			jQuery( '#tag-' + key + ' td.order' ).html( new_pos[ key ]['order'] );
+			jQuery( '#tag-' + key + ' td.order' ).html(
+				Number( new_pos[ key ]['order'] )
+			);
 		}
 
 	}, 500 );
