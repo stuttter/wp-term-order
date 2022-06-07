@@ -165,9 +165,12 @@ final class WP_Term_Order {
 	 *
 	 * @since 1.0.0
 	 * @param array $taxonomy
-	 * @return bool
+	 * @return bool Default true
 	 */
 	public function taxonomy_supported( $taxonomy = array() ) {
+
+		// Defaut return value
+		$retval = true;
 
 		if ( is_string( $taxonomy ) ) {
 			$taxonomy = (array) $taxonomy;
@@ -176,12 +179,30 @@ final class WP_Term_Order {
 		if ( is_array( $taxonomy ) ) {
 			foreach ( $taxonomy as $tax ) {
 				if ( ! in_array( $tax, $this->taxonomies, true ) ) {
-					return false;
+					$retval = false;
+					break;
 				}
 			}
 		}
 
-		return true;
+		// Filter & return
+		return (bool) apply_filters( 'wp_term_order_taxonomy_supported', $retval, $taxonomy );
+	}
+
+	/**
+	 * Check if a taxonomy supports overriding the orderby of a WP_Term_Query.
+	 *
+	 * @since 1.0.0
+	 * @param array $taxonomy
+	 * @return bool Default true
+	 */
+	public function taxonomy_override_orderby_supported( $taxonomy = array() ) {
+
+		// Defaut return value
+		$retval = $this->taxonomy_supported( $taxonomy );
+
+		// Filter & return
+		return (bool) apply_filters( 'wp_term_order_taxonomy_override_orderby_supported', $retval, $taxonomy );
 	}
 
 	/**
@@ -631,10 +652,15 @@ final class WP_Term_Order {
 	 * @param  array  $args
 	 * @return string
 	 */
-	public function get_terms_orderby( $orderby = 'name', $args = array() ) {
+	public function get_terms_orderby( $orderby = 't.name', $args = array() ) {
 
 		// Bail if taxonomy not supported
 		if ( ! $this->taxonomy_supported( $args['taxonomy'] ) ) {
+			return $orderby;
+		}
+
+		// Bail if taxonomy orderby override not supported
+		if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
 			return $orderby;
 		}
 
@@ -644,10 +670,14 @@ final class WP_Term_Order {
 		}
 
 		// Maybe force `orderby`
-		if ( empty( $args['orderby'] ) || empty( $orderby ) || ( 'order' === $args['orderby'] ) || in_array( $orderby, array( 'name', 't.name' ), true ) ) {
+		if ( 'order' === $args['orderby'] ) {
 			$orderby = 'tt.order';
+
 		} elseif ( 't.name' === $orderby ) {
 			$orderby = 'tt.order, t.name';
+
+		} elseif ( empty( $orderby ) ) {
+			$orderby = 'tt.order';
 		}
 
 		// Return possibly modified `orderby` value
