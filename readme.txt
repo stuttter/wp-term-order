@@ -6,7 +6,7 @@ License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Donate link:       https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9Q4F4EL5YJ62J
 Requires at least: 4.3
 Tested up to:      5.5
-Stable tag:        1.0.0
+Stable tag:        2.0.0
 
 == Description ==
 
@@ -57,6 +57,17 @@ The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order
 http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
+
+= 2.0.0 =
+* Migrate existing order data to term meta on upgrade
+* Fix order override when querying for terms
+* Fix terms sometimes not saving their order
+* Add filter for taxonomy overrides
+* Add filter for database strategy
+* Move init out of __construct
+* "Order" is now a default hidden column
+* Remove static designation from certain method calls
+* More accurate cache usage & cleaning
 
 = 1.0.0 =
 * Do action when order is updated

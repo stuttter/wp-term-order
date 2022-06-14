@@ -1,19 +1,25 @@
 /* global inlineEditTax, ajaxurl */
 
 var sortable_terms_table = jQuery( '.wp-list-table tbody' ),
-	taxonomy             = jQuery( 'form input[name="taxonomy"]' ).val();
+	taxonomy             = jQuery( 'form input[name="taxonomy"]' ).val(),
+	term_row             = '';
 
+/**
+ * Fancy drag & drop sortable UI for terms.
+ *
+ * @since 1.0.0
+ */
 sortable_terms_table.sortable( {
 
 	// Settings
 	items:     '> tr:not(.no-items)',
+	cancel:    '.inline-edit-row',
 	cursor:    'move',
 	axis:      'y',
-	cancel:    '.inline-edit-row',
-	distance:  2,
-	opacity:   0.9,
 	tolerance: 'pointer',
 	scroll:    true,
+	distance:  2,
+	opacity:   0.9,
 
 	/**
 	 * Sort start
@@ -72,24 +78,30 @@ sortable_terms_table.sortable( {
 	 * @returns {void}
 	 */
 	update: function ( e, ui ) {
-		sortable_terms_table.sortable( 'disable' ).addClass( 'to-updating' );
-
-		ui.item.addClass( 'to-row-updating' );
-
 		var strlen     = 4,
-			termid     = ui.item[0].id.substr( strlen ),
+			termid     = ui.item[ 0 ].id.substr( strlen ),
 			prevtermid = false,
-			prevterm   = ui.item.prev();
+			prevterm   = ui.item.prev(),
+			nexttermid = false,
+			nextterm   = ui.item.next();
 
 		if ( prevterm.length > 0 ) {
 			prevtermid = prevterm.attr( 'id' ).substr( strlen );
 		}
 
-		var nexttermid = false,
-			nextterm   = ui.item.next();
 		if ( nextterm.length > 0 ) {
 			nexttermid = nextterm.attr( 'id' ).substr( strlen );
 		}
+
+		// Set term row to this item
+		term_row = ui.item;
+
+		// Disable sorting & style for updating
+		sortable_terms_table
+			.addClass( 'to-updating' )
+			.sortable( 'disable' );
+
+		term_row.addClass( 'to-row-updating' );
 
 		// Go do the sorting stuff via ajax
 		jQuery.post( ajaxurl, {
@@ -105,20 +117,46 @@ sortable_terms_table.sortable( {
 /**
  * Update the term order based on the ajax response
  *
- * @param {type} response
+ * @param {string} response
+ * @param {object} post
  * @returns {void}
  */
-function term_order_update_callback( response ) {
+function term_order_update_callback( response, post ) {
+
+	// Default values
+	var error   = false,
+		changes = {},
+		new_pos = {};
+
+	// Catch errors
+	try {
+		changes = JSON.parse( response ),
+		new_pos = changes.new_pos;
+		error   = ( 'success' !== post );
+
+	} catch ( e ) {
+		error = true;
+	}
+
+	// Bail on early error
+	if ( true === error ) {
+		sortable_terms_table
+			.hide()
+			.sortable( 'cancel' )
+			.removeClass( 'to-updating' )
+			.sortable( 'enable' )
+			.fadeIn( 200, 'linear' );
+
+		term_row.removeClass( 'to-row-updating' );
+
+		return;
+	}
 
 	// Bail if term has children
 	if ( 'children' === response ) {
 		window.location.reload();
 		return;
 	}
-
-	// Parse the response
-	var changes = JSON.parse( response ),
-		new_pos = changes.new_pos;
 
 	// Empty out order texts
 	for ( var key in new_pos ) {
@@ -145,22 +183,35 @@ function term_order_update_callback( response ) {
 			excluded: changes.next['excluded'],
 			tax:      taxonomy
 		}, term_order_update_callback );
-
-	// Clean up
-	} else {
-		sortable_terms_table.removeClass( 'to-updating' ).sortable( 'enable' );
 	}
 
 	// Update and more clean-up
 	setTimeout( function() {
-		jQuery( '.to-row-updating' ).removeClass( 'to-row-updating' );
+
+		// Clean-up
+		if ( ! changes.next ) {
+			sortable_terms_table
+				.removeClass( 'to-updating' )
+				.sortable( 'enable' );
+		}
+
+		// Row not updating anymore
+		term_row.removeClass( 'to-row-updating' );
 
 		// Update order text
 		for ( var key in new_pos ) {
-			jQuery( '#tag-' + key + ' td.order' ).html(
-				Number( new_pos[ key ]['order'] )
-			);
-		}
 
-	}, 500 );
+			// Get numbers
+			var element = jQuery( '#tag-' + key + ' td.order' ),
+				updated = Number( new_pos[ key ]['order'] ),
+				current = element.html();
+
+			// Only empty if changing
+			if ( updated !== current ) {
+				element.html(
+					Number( new_pos[ key ]['order'] )
+				);
+			}
+		}
+	}, 600 );
 }
