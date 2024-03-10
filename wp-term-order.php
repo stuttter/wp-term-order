@@ -171,7 +171,7 @@ final class WP_Term_Order {
 		add_action( 'wp_ajax_reordering_terms', array( $this, 'ajax_reordering_terms' ) );
 
 		// Only blog admin screens
-		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) || ( defined( 'WP_CLI' ) && ! empty( constant( 'WP_CLI' ) ) ) ) {
+		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) || defined( 'WP_CLI' ) ) {
 			add_action( 'admin_init', array( $this, 'admin_init' ) );
 
 			// Bail if taxonomy does not include colors
