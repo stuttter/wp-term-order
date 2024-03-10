@@ -10,7 +10,7 @@
  * License:           GPL v2 or later
  * Requires PHP:      5.6.20
  * Requires at least: 5.3
- * Version:           2.0.0
+ * Version:           2.1.0
  */
 
 // Exit if accessed directly
@@ -29,12 +29,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '2.0.0';
+	public $version = '2.1.0';
 
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 202106140001;
+	public $db_version = 202303100001;
 
 	/**
 	 * @var string Database version
@@ -75,6 +75,21 @@ final class WP_Term_Order {
 	 * @var bool Whether to use fancy ordering
 	 */
 	public $fancy = true;
+
+	/**
+	 * @var WP_Meta_Query Meta query arguments
+	 */
+	public $meta_query = false;
+
+	/**
+	 * @var array Term query clauses
+	 */
+	public $term_clauses = array();
+
+	/**
+	 * @var array Term query clauses
+	 */
+	public $meta_clauses = array();
 
 	/**
 	 * Empty constructor
@@ -156,10 +171,10 @@ final class WP_Term_Order {
 		add_action( 'wp_ajax_reordering_terms', array( $this, 'ajax_reordering_terms' ) );
 
 		// Only blog admin screens
-		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) || defined( 'WP_CLI' ) ) {
 			add_action( 'admin_init', array( $this, 'admin_init' ) );
 
-			// Bail if taxonomy does not include colors
+			// Proceed only if taxonomy supported
 			if ( ! empty( $_REQUEST['taxonomy'] ) && $this->taxonomy_supported( $_REQUEST['taxonomy'] ) && ! defined( 'WP_CLI' ) ) {
 				add_action( 'load-edit-tags.php', array( $this, 'edit_tags' ) );
 			}
