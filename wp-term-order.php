@@ -673,7 +673,7 @@ final class WP_Term_Order {
 				</label>
 			</th>
 			<td>
-				<input name="order" id="order" type="text" value="<?php echo $this->get_term_order( $term ); ?>" size="11" />
+				<input name="order" id="order" type="text" value="<?php echo $this->get_term_order( $term->term_id ); ?>" size="11" />
 				<p class="description">
 					<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 				</p>
