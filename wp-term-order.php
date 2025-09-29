@@ -364,7 +364,6 @@ final class WP_Term_Order {
 			.to-row-updating .check-column input {
 				visibility: hidden;
 			}
-
 			<?php endif; ?>
 
 		</style>

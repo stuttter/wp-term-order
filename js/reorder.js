@@ -1,8 +1,12 @@
 /* global inlineEditTax, ajaxurl */
 
 var sortable_terms_table = jQuery( '.wp-list-table tbody' ),
+	rows                 = sortable_terms_table.children('tr'),
 	taxonomy             = jQuery( 'form input[name="taxonomy"]' ).val(),
-	term_row             = '';
+	term_row             = ''
+	term_tree            = [],
+	sibling_class_name   = 'droppable',
+	group_class_name     = 'grababble';
 
 /**
  * Fancy drag & drop sortable UI for terms.
@@ -215,3 +219,136 @@ function term_order_update_callback( response, post ) {
 		}
 	}, 600 );
 }
+
+/**
+ * The following functions are experimental (for hierarchical reordering support)
+ */
+
+// Function to build the tree structure representing the table hierarchy
+function term_order_build_tree() {
+	var tree = [];
+	rows.each(
+		function() {
+			var row         = jQuery(this),
+				match       = row.attr('class').match(/level-(\d+)/),
+				level       = parseInt(match[1]),
+				parentLevel = level - 1
+				rowData     = {
+					element:  row,
+					level:    level,
+					children: []
+				};
+
+			if (parentLevel >= 0) {
+				var prev   = row.prevAll('.level-' + parentLevel + ':first'),
+					parent = term_order_find_node(tree, prev);
+
+				if (parent) {
+					parent.children.push(rowData);
+				}
+			} else {
+				tree.push(rowData);
+			}
+		}
+	);
+	return tree;
+}
+
+// Function to recursively highlight the rows in the tree
+function term_order_highlight_grab_group(node) {
+	node.element.addClass( group_class_name );
+	node.children.forEach(
+		function(child) {
+			term_order_highlight_grab_group(child);
+		}
+	);
+}
+
+// Get siblings and highlight them
+function term_order_highlight_siblings(node) {
+	var siblings = term_order_find_siblings(node);
+
+	siblings.forEach(
+		function(sibling) {
+			sibling.element.addClass(sibling_class_name);
+		}
+	);
+}
+
+// Function to recursively highlight the ancestors of a node
+function term_order_highlight_ancestors(node) {
+	if (node && node.element) {
+		node.element.addClass( group_class_name );
+		term_order_highlight_ancestors(
+			term_order_find_parent(node)
+		);
+	}
+}
+
+// Function to find the parent of a node
+function term_order_find_parent( node ) {
+	var level = node.level - 1;
+
+	if ( level >= 0 ) {
+		var prev = node.element.prevAll('.level-' + level + ':first');
+
+		return term_order_find_node(tree, prev);
+	}
+
+	return null;
+}
+
+// Function to find the siblings of a node
+function term_order_find_siblings( node ) {
+	var parent = term_order_find_parent( node );
+
+	// Has parent
+	if (parent) {
+		return parent.children.filter( function( child ) {
+			return child !== node;
+		});
+
+	// Is root
+	} else {
+		return tree.filter( function( child ) {
+			return child !== node;
+		});
+	}
+}
+
+// Function to find the node corresponding to the given row in the tree
+function term_order_find_node( tree, row ) {
+	for ( var i = 0; i < tree.length; i++ ) {
+		var node = tree[ i ];
+
+		if ( node.element.is( row ) ) {
+			return node;
+		}
+
+		var found = term_order_find_node( node.children, row );
+
+		if ( found ) {
+			return found;
+		}
+	}
+	return null;
+}
+
+// Hover event handler
+rows.hover(
+	function() {
+		// Assign the tree variable
+		tree = term_order_build_tree();
+
+		var currentRow  = jQuery( this ),
+			currentNode = term_order_find_node( tree, currentRow );
+
+		term_order_highlight_grab_group( currentNode );
+		term_order_highlight_siblings( currentNode );
+	},
+	function() {
+		rows
+			.removeClass( group_class_name )
+			.removeClass( sibling_class_name );
+	}
+);
