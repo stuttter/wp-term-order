@@ -830,8 +830,17 @@ final class WP_Term_Order {
 				$r = array_merge( $args, array(
 					'meta_query' => array(
 						'order_clause' => array(
-							'key'  => 'order',
-							'type' => 'NUMERIC'
+							'relation' => 'OR',
+							array(
+								'key'     => 'order',
+								'type'    => 'NUMERIC',
+								'compare' => 'EXISTS',
+							),
+							array(
+								'key'     => 'order',
+								'type'    => 'NUMERIC',
+								'compare' => 'NOT EXISTS',
+							)
 						)
 					)
 				) );
