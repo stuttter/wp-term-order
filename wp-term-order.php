@@ -1147,7 +1147,8 @@ final class WP_Term_Order {
 		}
 
 		// Get term siblings for relative ordering
-		$siblings = get_terms( $taxonomy, array(
+		$siblings = get_terms( array(
+			'taxonomy'   => $taxonomy,
 			'depth'      => 1,
 			'number'     => 100,
 			'parent'     => $parent_id,
@@ -1175,17 +1176,15 @@ final class WP_Term_Order {
 			if ( $nextid === (int) $sibling->term_id ) {
 				$this->set_term_order( $term->term_id, $taxonomy, $start, true );
 
-				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+				$term_ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
 
 				$new_pos[ $term->term_id ] = array(
 					'order'  => $start,
 					'parent' => $parent_id,
-					'depth'  => count( $ancestors ),
+					'depth'  => count( $term_ancestors ),
 				);
 
 				$start++;
-			} else {
-				$ancestors = array();
 			}
 
 			// Get the term order, either from object or meta
@@ -1203,10 +1202,12 @@ final class WP_Term_Order {
 				$this->set_term_order( $sibling->term_id, $taxonomy, $start, true );
 			}
 
+			$sibling_ancestors = get_ancestors( $sibling->term_id, $taxonomy, 'taxonomy' );
+
 			$new_pos[ $sibling->term_id ] = array(
 				'order'  => $start,
 				'parent' => $parent_id,
-				'depth'  => count( $ancestors )
+				'depth'  => count( $sibling_ancestors )
 			);
 
 			$start++;
@@ -1214,17 +1215,15 @@ final class WP_Term_Order {
 			if ( empty( $nextid ) && ( $previd === (int) $sibling->term_id ) ) {
 				$this->set_term_order( $term->term_id, $taxonomy, $start, true );
 
-				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+				$term_ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
 
 				$new_pos[ $term->term_id ] = array(
 					'order'  => $start,
 					'parent' => $parent_id,
-					'depth'  => count( $ancestors ),
+					'depth'  => count( $term_ancestors ),
 				);
 
 				$start++;
-			} else {
-				$ancestors = array();
 			}
 		}
 
@@ -1245,7 +1244,8 @@ final class WP_Term_Order {
 		if ( empty( $retval->next ) ) {
 
 			// If the moved term has children, refresh the page for UI reasons
-			$children = get_terms( $taxonomy, array(
+			$children = get_terms( array(
+				'taxonomy'   => $taxonomy,
 				'number'     => 1,
 				'depth'      => 1,
 				'orderby'    => 'order',
