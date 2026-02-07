@@ -1,4 +1,4 @@
-/* global inlineEditTax, ajaxurl */
+/* global inlineEditTax, ajaxurl, wpTermOrder */
 
 var sortable_terms_table = jQuery( '.wp-list-table tbody' ),
 	taxonomy             = jQuery( 'form input[name="taxonomy"]' ).val(),
@@ -106,6 +106,7 @@ sortable_terms_table.sortable( {
 		// Go do the sorting stuff via ajax
 		jQuery.post( ajaxurl, {
 			action: 'reordering_terms',
+			nonce:  wpTermOrder.nonce,
 			id:     termid,
 			previd: prevtermid,
 			nextid: nexttermid,
@@ -175,7 +176,8 @@ function term_order_update_callback( response, post ) {
 	// Maybe repost the next change
 	if ( changes.next ) {
 		jQuery.post( ajaxurl, {
-			action:  'reordering_terms',
+			action:   'reordering_terms',
+			nonce:    wpTermOrder.nonce,
 			id:       changes.next['id'],
 			previd:   changes.next['previd'],
 			nextid:   changes.next['nextid'],

@@ -3,10 +3,10 @@ Contributors:      johnjamesjacoby, stuttter
 Tags:              taxonomy, term, order
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
-Donate link:       https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9Q4F4EL5YJ62J
-Requires at least: 4.3
-Tested up to:      6.5
-Stable tag:        2.1.0
+Requires at least: 5.3
+Requires PHP:      7.0
+Tested up to:      7.0
+Stable tag:        2.2.0
 
 == Description ==
 
@@ -58,9 +58,11 @@ http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
 
+= 2.2.0 =
+* Fix CSRF. Thank you Nabil Irawan.
+
 = 2.1.0 =
 * PHP8 support
-* 
 
 = 2.0.0 =
 * Migrate existing order data to term meta on upgrade

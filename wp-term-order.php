@@ -7,10 +7,12 @@
  * Author:            John James Jacoby
  * Author URI:        https://jjj.blog
  * Text Domain:       wp-term-order
- * License:           GPL v2 or later
- * Requires PHP:      5.6.20
+ * License:           GPLv2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Requires at least: 5.3
- * Version:           2.1.0
+ * Requires PHP:      7.0
+ * Tested up to:      7.0
+ * Version:           2.2.0
  */
 
 // Exit if accessed directly
@@ -29,12 +31,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '2.1.0';
+	public $version = '2.2.0';
 
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 202303100001;
+	public $db_version = 202602070001;
 
 	/**
 	 * @var string Database version
@@ -154,11 +156,11 @@ final class WP_Term_Order {
 
 			// Register "order" meta value
 			register_term_meta( $value, 'order', array(
-				'type'              => 'integer',
-				'description'       => esc_html__( 'Numeric order for terms, useful when sorting', 'wp-term-order' ),
-				'default'           => 0,
-				'single'            => true,
-				'show_in_rest'      => true,
+				'type'         => 'integer',
+				'description'  => esc_html__( 'Numeric order for terms, useful when sorting', 'wp-term-order' ),
+				'default'      => 0,
+				'single'       => true,
+				'show_in_rest' => true,
 			) );
 		}
 
@@ -185,7 +187,7 @@ final class WP_Term_Order {
 	}
 
 	/**
-	 * Administration area hooks
+	 * Administration area hooks.
 	 *
 	 * @since 0.1.0
 	 */
@@ -193,17 +195,21 @@ final class WP_Term_Order {
 
 		// Check for DB update
 		$this->maybe_upgrade_database();
+
+		// Register scripts
+		$this->register_scripts();
 	}
 
 	/**
-	 * Administration area hooks
+	 * Administration area hooks.
 	 *
 	 * @since 0.1.0
 	 */
 	public function edit_tags() {
 		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'enqueue_scripts' ) );
-		add_action( 'admin_head-edit-tags.php',          array( $this, 'admin_head'      ) );
-		add_action( 'admin_head-edit-tags.php',          array( $this, 'help_tabs'       ) );
+		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'localize_scripts' ) );
+		add_action( 'admin_head-edit-tags.php',          array( $this, 'admin_head' ) );
+		add_action( 'admin_head-edit-tags.php',          array( $this, 'help_tabs' ) );
 		add_action( 'quick_edit_custom_box',             array( $this, 'quick_edit_term_order' ), 10, 3 );
 	}
 
@@ -259,21 +265,52 @@ final class WP_Term_Order {
 	}
 
 	/**
-	 * Enqueue quick-edit JS
+	 * Register scripts.
+	 *
+	 * @since 2.2.0
+	 */
+	public function register_scripts() {
+		wp_register_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ),             $this->db_version, true );
+		wp_register_script( 'term-order-reorder',    $this->url . 'js/reorder.js',    array( 'jquery-ui-sortable' ), $this->db_version, true );
+	}
+
+	/**
+	 * Enqueue scripts.
 	 *
 	 * @since 0.1.0
 	 */
 	public function enqueue_scripts() {
-		wp_enqueue_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ), $this->db_version, true );
+
+		// Always enqueue quick-edit
+		wp_enqueue_script( 'term-order-quick-edit' );
 
 		// Enqueue fancy ordering
 		if ( true === $this->fancy ) {
-			wp_enqueue_script( 'term-order-reorder', $this->url . 'js/reorder.js', array( 'jquery-ui-sortable' ), $this->db_version, true );
+			wp_enqueue_script( 'term-order-reorder' );
 		}
 	}
 
 	/**
-	 * Contextual help tabs
+	 * Localize scripts.
+	 *
+	 * @since 2.2.0
+	 */
+	public function localize_scripts() {
+
+		// Only if fancy
+		if ( true === $this->fancy ) {
+			wp_localize_script(
+				'term-order-reorder',
+				'wpTermOrder',
+				array(
+					'nonce' => wp_create_nonce( 'wp_term_order_reordering_terms' ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Contextual help tabs.
 	 *
 	 * @since 0.1.5
 	 */
@@ -422,8 +459,13 @@ final class WP_Term_Order {
 	 */
 	public function add_column_value( $empty = '', $custom_column = '', $term_id = 0 ) {
 
+		// Get taxonomy and sanitize it
+		$taxonomy = ! empty( $_REQUEST['taxonomy'] )
+			? sanitize_key( $_REQUEST['taxonomy'] )
+			: '';
+
 		// Bail if no taxonomy passed or not on the `order` column
-		if ( empty( $_REQUEST['taxonomy'] ) || ( 'order' !== $custom_column ) || ! empty( $empty ) ) {
+		if ( empty( $taxonomy ) || ( 'order' !== $custom_column ) || ! empty( $empty ) ) {
 			return;
 		}
 
@@ -478,6 +520,11 @@ final class WP_Term_Order {
 		 * form is used to update a term.
 		 */
 		if ( ! isset( $_POST['order'] ) ) {
+			return;
+		}
+
+		// Bail if user cannot edit this term
+		if ( ! current_user_can( 'edit_term', $term_id ) ) {
 			return;
 		}
 
@@ -589,7 +636,7 @@ final class WP_Term_Order {
 			// Get the term, probably from cache at this point
 			$term = get_term( $term_id, $tax );
 
-			if ( isset( $term->order ) ) {
+			if ( ! is_wp_error( $term ) && isset( $term->order ) ) {
 				$retval = $term->order;
 			}
 		}
@@ -673,7 +720,7 @@ final class WP_Term_Order {
 				</label>
 			</th>
 			<td>
-				<input name="order" id="order" type="text" value="<?php echo $this->get_term_order( $term->term_id ); ?>" size="11" />
+				<input name="order" id="order" type="text" value="<?php echo esc_attr( $this->get_term_order( $term->term_id ) ); ?>" size="11" />
 				<p class="description">
 					<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 				</p>
@@ -961,6 +1008,9 @@ final class WP_Term_Order {
 
 			// The main column alter
 			if ( $old_version < 201508110005 ) {
+
+				// Safe: $wpdb->term_taxonomy is a sanitized WordPress core table name
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$wpdb->query( "ALTER TABLE `{$wpdb->term_taxonomy}` ADD `order` INT (11) NOT NULL DEFAULT 0;" );
 			}
 		}
@@ -968,7 +1018,8 @@ final class WP_Term_Order {
 		// Migrate column values to meta
 		if ( $old_version < 202106140001 ) {
 
-			// Query for all terms
+			// Safe: $wpdb->term_taxonomy is a sanitized WordPress core table name
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$terms = $wpdb->get_results( "SELECT * FROM `{$wpdb->term_taxonomy}`;" );
 
 			// Loop through and copy to meta
@@ -1004,9 +1055,31 @@ final class WP_Term_Order {
 	 */
 	public function ajax_reordering_terms() {
 
-		// Bail if required term data is missing
-		if ( empty( $_POST['id'] ) || empty( $_POST['tax'] ) || ( ! isset( $_POST['previd'] ) && ! isset( $_POST['nextid'] ) ) ) {
-			die( -1 );
+		// Validate nonce for this action first
+		check_ajax_referer( 'wp_term_order_reordering_terms', 'nonce' );
+
+		// Bail if required term data is missing or fails validation
+		if (
+			empty( $_POST['id'] ) || ! is_numeric( $_POST['id'] )
+			||
+			empty( $_POST['tax'] ) || ! is_string( $_POST['tax'] )
+			||
+			(
+				! isset( $_POST['previd'] )
+				&&
+				! isset( $_POST['nextid'] )
+			)
+		) {
+			wp_die( -1 );
+		}
+
+		// Bail if prev && next ID are not numeric
+		if (
+			! is_numeric( $_POST['previd'] )
+			&&
+			! is_numeric( $_POST['nextid'] )
+		) {
+			wp_die( -1 );
 		}
 
 		// Sanitize
@@ -1018,27 +1091,27 @@ final class WP_Term_Order {
 
 		// Bail if taxonomy does not exist
 		if ( empty( $tax ) || ! $this->taxonomy_supported( $tax ) ) {
-			die( -1 );
+			wp_die( -1 );
 		}
 
-		// Bail if current user cannot assign terms
-		if ( ! current_user_can( $tax->cap->edit_terms ) ) {
-			die( -1 );
+		// Bail if current user cannot assign term
+		if ( ! current_user_can( 'edit_term', $term_id ) ) {
+			wp_die( -1 );
 		}
 
 		// Bail if term cannot be found
 		$term = get_term( $term_id, $taxonomy );
-		if ( empty( $term ) ) {
-			die( -1 );
+		if ( empty( $term ) || is_wp_error( $term ) ) {
+			wp_die( -1 );
 		}
 
 		// Sanitize positions
 		$previd   = empty( $_POST['previd']   ) ? false : (int) $_POST['previd'];
 		$nextid   = empty( $_POST['nextid']   ) ? false : (int) $_POST['nextid'];
 		$start    = empty( $_POST['start']    ) ? 1     : (int) $_POST['start'];
-		$excluded = empty( $_POST['excluded'] )
+		$excluded = empty( $_POST['excluded'] ) || ! wp_is_numeric_array( $_POST['excluded'] )
 			? array( $term->term_id )
-			: array_filter( (array) $_POST['excluded'], 'intval' );
+			: wp_parse_id_list( $_POST['excluded'] );
 
 		// Default return values
 		$retval  = new stdClass;
@@ -1081,8 +1154,13 @@ final class WP_Term_Order {
 			'orderby'    => 'order',
 			'order'      => 'ASC',
 			'hide_empty' => false,
-			'exclude'    => array_unique( $excluded )
+			'exclude'    => $excluded
 		) );
+
+		// Bail if error
+		if ( is_wp_error( $siblings ) ) {
+			wp_die( -1 );
+		}
 
 		// Loop through siblings and update terms
 		foreach ( $siblings as $sibling ) {
@@ -1177,15 +1255,16 @@ final class WP_Term_Order {
 				'hide_empty' => false
 			) );
 
-			if ( ! empty( $children ) ) {
-				die( 'children' );
+			if ( ! empty( $children ) && ! is_wp_error( $children ) ) {
+				wp_die( 'children' );
 			}
 		}
 
 		// Add to return value
 		$retval->new_pos = $new_pos;
 
-		die( json_encode( $retval ) );
+		// Send return value as JSON
+		wp_json_encode( $retval );
 	}
 }
 endif;
