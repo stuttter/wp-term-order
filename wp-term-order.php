@@ -1089,8 +1089,8 @@ final class WP_Term_Order {
 		// Attempt to get the taxonomy
 		$tax = get_taxonomy( $taxonomy );
 
-		// Bail if taxonomy does not exist
-		if ( empty( $tax ) || ! $this->taxonomy_supported( $tax ) ) {
+		// Bail if taxonomy does not exist or is not supported
+		if ( empty( $tax ) || ! $this->taxonomy_supported( $taxonomy ) ) {
 			wp_die( -1 );
 		}
 
