@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var string Database version
 	 */
-	public $db_version = 202602070001;
+	public $db_version = 202602070003;
 
 	/**
 	 * @var string Database version
@@ -1070,7 +1070,7 @@ final class WP_Term_Order {
 				! isset( $_POST['nextid'] )
 			)
 		) {
-			wp_die( -1 );
+			wp_send_json_error( array( 'message' => 'Invalid request data' ) );
 		}
 
 		// Bail if prev && next ID are not numeric
@@ -1079,7 +1079,7 @@ final class WP_Term_Order {
 			&&
 			! is_numeric( $_POST['nextid'] )
 		) {
-			wp_die( -1 );
+			wp_send_json_error( array( 'message' => 'Invalid position data' ) );
 		}
 
 		// Sanitize
@@ -1091,18 +1091,18 @@ final class WP_Term_Order {
 
 		// Bail if taxonomy does not exist
 		if ( empty( $tax ) || ! $this->taxonomy_supported( $tax ) ) {
-			wp_die( -1 );
+			wp_send_json_error( array( 'message' => 'Invalid taxonomy' ) );
 		}
 
 		// Bail if current user cannot assign term
 		if ( ! current_user_can( 'edit_term', $term_id ) ) {
-			wp_die( -1 );
+			wp_send_json_error( array( 'message' => 'Permission denied' ) );
 		}
 
 		// Bail if term cannot be found
 		$term = get_term( $term_id, $taxonomy );
 		if ( empty( $term ) || is_wp_error( $term ) ) {
-			wp_die( -1 );
+			wp_send_json_error( array( 'message' => 'Term not found' ) );
 		}
 
 		// Sanitize positions
@@ -1159,7 +1159,7 @@ final class WP_Term_Order {
 
 		// Bail if error
 		if ( is_wp_error( $siblings ) ) {
-			wp_die( -1 );
+			wp_send_json_error( array( 'message' => 'Failed to get siblings' ) );
 		}
 
 		// Loop through siblings and update terms
@@ -1256,15 +1256,14 @@ final class WP_Term_Order {
 			) );
 
 			if ( ! empty( $children ) && ! is_wp_error( $children ) ) {
-				wp_die( 'children' );
+				wp_send_json_error( array( 'message' => 'children' ) );
 			}
 		}
 
 		// Add to return value
 		$retval->new_pos = $new_pos;
 
-		// Send return value as JSON
-		wp_json_encode( $retval );
+		wp_send_json_success( $retval );
 	}
 }
 endif;
