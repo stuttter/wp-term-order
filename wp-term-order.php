@@ -89,7 +89,7 @@ final class WP_Term_Order {
 	public $term_clauses = array();
 
 	/**
-	 * @var array Term query clauses
+	 * @var array Meta query clauses
 	 */
 	public $meta_clauses = array();
 
@@ -224,7 +224,7 @@ final class WP_Term_Order {
 	 */
 	public function taxonomy_supported( $taxonomy = array() ) {
 
-		// Defaut return value
+		// Default return value
 		$retval = true;
 
 		if ( is_string( $taxonomy ) ) {
@@ -257,7 +257,7 @@ final class WP_Term_Order {
 	 */
 	public function taxonomy_override_orderby_supported( $taxonomy = array() ) {
 
-		// Defaut return value
+		// Default return value
 		$retval = $this->taxonomy_supported( $taxonomy );
 
 		// Filter & return
@@ -622,7 +622,7 @@ final class WP_Term_Order {
 	 */
 	public function get_term_order( $term_id = 0 ) {
 
-		// Use false
+		// Start with no value
 		$retval = false;
 
 		// Use term order if set and strategy allows
@@ -1130,7 +1130,7 @@ final class WP_Term_Order {
 		// If the next term's parent isn't the same as our parent, we need more info
 		} elseif ( $next_term_parent !== $parent_id ) {
 			$prev_term_parent = $previd
-				? wp_get_term_taxonomy_parent_id( $nextid, $taxonomy )
+				? wp_get_term_taxonomy_parent_id( $previd, $taxonomy )
 				: false;
 
 			// If the previous term is not our parent now, set it
