@@ -11,7 +11,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Requires at least: 5.3
  * Requires PHP:      7.0
- * Tested up to:      7.0
+ * Tested up to:      6.4
  * Version:           2.2.0
  */
 
@@ -1074,11 +1074,10 @@ final class WP_Term_Order {
 		}
 
 		// Bail if prev && next ID are not numeric
-		if (
-			! is_numeric( $_POST['previd'] )
-			&&
-			! is_numeric( $_POST['nextid'] )
-		) {
+		$has_previd = isset( $_POST['previd'] ) && is_numeric( $_POST['previd'] );
+		$has_nextid = isset( $_POST['nextid'] ) && is_numeric( $_POST['nextid'] );
+
+		if ( ! $has_previd && ! $has_nextid ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid position data', 'wp-term-order' ) ) );
 		}
 
