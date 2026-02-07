@@ -1070,7 +1070,7 @@ final class WP_Term_Order {
 				! isset( $_POST['nextid'] )
 			)
 		) {
-			wp_send_json_error( array( 'message' => 'Invalid request data' ) );
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid request data', 'wp-term-order' ) ) );
 		}
 
 		// Bail if prev && next ID are not numeric
@@ -1079,7 +1079,7 @@ final class WP_Term_Order {
 			&&
 			! is_numeric( $_POST['nextid'] )
 		) {
-			wp_send_json_error( array( 'message' => 'Invalid position data' ) );
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid position data', 'wp-term-order' ) ) );
 		}
 
 		// Sanitize
@@ -1091,18 +1091,18 @@ final class WP_Term_Order {
 
 		// Bail if taxonomy does not exist or is not supported
 		if ( empty( $tax ) || ! $this->taxonomy_supported( $taxonomy ) ) {
-			wp_die( -1 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid taxonomy', 'wp-term-order' ) ) );
 		}
 
 		// Bail if current user cannot assign term
 		if ( ! current_user_can( 'edit_term', $term_id ) ) {
-			wp_send_json_error( array( 'message' => 'Permission denied' ) );
+			wp_send_json_error( array( 'message' => esc_html__( 'Permission denied', 'wp-term-order' ) ) );
 		}
 
 		// Bail if term cannot be found
 		$term = get_term( $term_id, $taxonomy );
 		if ( empty( $term ) || is_wp_error( $term ) ) {
-			wp_send_json_error( array( 'message' => 'Term not found' ) );
+			wp_send_json_error( array( 'message' => esc_html__( 'Term not found', 'wp-term-order' ) ) );
 		}
 
 		// Sanitize positions
@@ -1159,7 +1159,7 @@ final class WP_Term_Order {
 
 		// Bail if error
 		if ( is_wp_error( $siblings ) ) {
-			wp_send_json_error( array( 'message' => 'Failed to get siblings' ) );
+			wp_send_json_error( array( 'message' => esc_html__( 'Failed to get siblings', 'wp-term-order' ) ) );
 		}
 
 		// Loop through siblings and update terms
