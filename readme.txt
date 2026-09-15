@@ -8,6 +8,8 @@ Requires PHP:      7.0
 Tested up to:      7.0
 Stable tag:        2.2.0
 
+Sort taxonomy terms your way.
+
 == Description ==
 
 Sort taxonomy terms, your way.
