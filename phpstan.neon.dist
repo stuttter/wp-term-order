@@ -1,0 +1,12 @@
+parameters:
+    level: 7
+    phpVersion: 70400
+    paths:
+        - wp-term-order.php
+    scanFiles:
+        - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+    stubFiles:
+        - phpstan-wordpress-compat.stub
+    tmpDir: build/phpstan
+    parallel:
+        maximumNumberOfProcesses: 1
