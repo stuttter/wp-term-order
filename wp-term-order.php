@@ -34,7 +34,7 @@ final class WP_Term_Order {
 	public $version = '2.2.0';
 
 	/**
-	 * @var string Database version
+	 * @var int Database version
 	 */
 	public $db_version = 202602070003;
 
@@ -69,7 +69,7 @@ final class WP_Term_Order {
 	public $basename = '';
 
 	/**
-	 * @var array Which taxonomies are being targeted?
+	 * @var array<string> Which taxonomies are being targeted?
 	 */
 	public $taxonomies = array();
 
@@ -79,17 +79,17 @@ final class WP_Term_Order {
 	public $fancy = true;
 
 	/**
-	 * @var WP_Meta_Query Meta query arguments
+	 * @var WP_Meta_Query|false Meta query arguments
 	 */
 	public $meta_query = false;
 
 	/**
-	 * @var array Term query clauses
+	 * @var array<string, string>|false Term query clauses
 	 */
 	public $term_clauses = array();
 
 	/**
-	 * @var array Meta query clauses
+	 * @var array<string, array<string, mixed>> Meta query clauses
 	 */
 	public $meta_clauses = array();
 
@@ -106,6 +106,7 @@ final class WP_Term_Order {
 	 * Hook into queries, admin screens, and more!
 	 *
 	 * @since 1.0.0
+	 * @return void
 	 */
 	public function init() {
 
@@ -119,7 +120,7 @@ final class WP_Term_Order {
 		 * Allow overriding the UI approach
 		 *
 		 * @since 1.0.0
-		 * @param bool True to use jQuery sortable. False for numbers only.
+		 * @param bool $fancy True to use jQuery sortable. False for numbers only.
 		 */
 		$this->fancy = apply_filters( 'wp_fancy_term_order', true );
 
@@ -130,7 +131,7 @@ final class WP_Term_Order {
 		 * the term_taxonomy database table.
 		 *
 		 * @since 2.0.0
-		 * @param string "modify_tables" by default. Return "meta" to not modify tables.
+		 * @param string $strategy "modify_tables" by default. Return "meta" to not modify tables.
 		 */
 		$this->db_strategy = apply_filters( 'wp_term_order_db_strategy', $this->db_strategy );
 
@@ -190,6 +191,7 @@ final class WP_Term_Order {
 	 * Administration area hooks.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function admin_init() {
 
@@ -204,6 +206,7 @@ final class WP_Term_Order {
 	 * Administration area hooks.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function edit_tags() {
 		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'enqueue_scripts' ) );
@@ -219,7 +222,7 @@ final class WP_Term_Order {
 	 * Check if a taxonomy supports ordering its terms.
 	 *
 	 * @since 1.0.0
-	 * @param array $taxonomy
+	 * @param mixed $taxonomy
 	 * @return bool Default true
 	 */
 	public function taxonomy_supported( $taxonomy = array() ) {
@@ -252,7 +255,7 @@ final class WP_Term_Order {
 	 * Allows filtering of overriding the orderby specifically.
 	 *
 	 * @since 2.0.0
-	 * @param array $taxonomy
+	 * @param array<int, string> $taxonomy
 	 * @return bool Default true
 	 */
 	public function taxonomy_override_orderby_supported( $taxonomy = array() ) {
@@ -268,6 +271,7 @@ final class WP_Term_Order {
 	 * Register scripts.
 	 *
 	 * @since 2.2.0
+	 * @return void
 	 */
 	public function register_scripts() {
 		wp_register_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ),             $this->db_version, true );
@@ -278,6 +282,7 @@ final class WP_Term_Order {
 	 * Enqueue scripts.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function enqueue_scripts() {
 
@@ -294,6 +299,7 @@ final class WP_Term_Order {
 	 * Localize scripts.
 	 *
 	 * @since 2.2.0
+	 * @return void
 	 */
 	public function localize_scripts() {
 
@@ -313,6 +319,7 @@ final class WP_Term_Order {
 	 * Contextual help tabs.
 	 *
 	 * @since 0.1.5
+	 * @return void
 	 */
 	public function help_tabs() {
 
@@ -338,6 +345,7 @@ final class WP_Term_Order {
 	 * Align custom `order` column, and fancy sortable styling.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function admin_head() {
 		?>
@@ -414,8 +422,8 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param array $args
-	 * @return array
+	 * @param array<string, mixed> $args
+	 * @return array<int, string>
 	 */
 	private function get_taxonomies( $args = array() ) {
 
@@ -438,8 +446,8 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param array $columns
-	 * @return array
+	 * @param array<string, string> $columns
+	 * @return array<string, string>
 	 */
 	public function add_column_header( $columns = array() ) {
 		$columns['order'] = esc_html__( 'Order', 'wp-term-order' );
@@ -476,8 +484,8 @@ final class WP_Term_Order {
 	 * Allow sorting by `order` order
 	 *
 	 * @since 0.1.0
-	 * @param array $columns
-	 * @return array
+	 * @param array<string, string> $columns
+	 * @return array<string, string>
 	 */
 	public function sortable_columns( $columns = array() ) {
 		$columns['order'] = 'order';
@@ -489,14 +497,14 @@ final class WP_Term_Order {
 	 * Add `order` to hidden columns
 	 *
 	 * @since 2.0.0
-	 * @param array     $columns
-	 * @param WP_Screen $screen
-	 * @return array
+	 * @param array<int, string> $columns
+	 * @param WP_Screen|string   $screen
+	 * @return array<int, string>
 	 */
 	public function hidden_columns( $columns = array(), $screen = '' ) {
 
 		// Bail if not on the `edit-tags` screen for a visible taxonomy
-		if ( ( 'edit-tags' !== $screen->base ) || ! $this->taxonomy_supported( $screen->taxonomy ) ) {
+		if ( ! $screen instanceof WP_Screen || ( 'edit-tags' !== $screen->base ) || ! $this->taxonomy_supported( $screen->taxonomy ) ) {
 			return $columns;
 		}
 
@@ -512,6 +520,7 @@ final class WP_Term_Order {
 	 * @param  int     $term_id   The ID of the term
 	 * @param  int     $tt_id     Not used
 	 * @param  string  $taxonomy  Taxonomy of the term
+	 * @return void
 	 */
 	public function add_term_order( $term_id = 0, $tt_id = 0, $taxonomy = '' ) {
 
@@ -542,10 +551,11 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 * @global object  $wpdb
-	 * @param  int     $term_id
-	 * @param  string  $taxonomy
-	 * @param  int     $order
-	 * @param  bool    $clean_cache
+	 * @param  int        $term_id
+	 * @param  string     $taxonomy
+	 * @param  int|string $order
+	 * @param  bool       $clean_cache
+	 * @return void
 	 */
 	public function set_term_order( $term_id = 0, $taxonomy = '', $order = 0, $clean_cache = false ) {
 		global $wpdb;
@@ -619,6 +629,7 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 * @param int $term_id
+	 * @return int
 	 */
 	public function get_term_order( $term_id = 0 ) {
 
@@ -636,7 +647,7 @@ final class WP_Term_Order {
 			// Get the term, probably from cache at this point
 			$term = get_term( $term_id, $tax );
 
-			if ( ! is_wp_error( $term ) && isset( $term->order ) ) {
+			if ( $term instanceof WP_Term && isset( $term->order ) ) {
 				$retval = $term->order;
 			}
 		}
@@ -656,6 +667,7 @@ final class WP_Term_Order {
 	 * Output the "order" form field when adding a new term
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function term_order_add_form_field() {
 
@@ -693,9 +705,13 @@ final class WP_Term_Order {
 	 * Output the "order" form field when editing an existing term
 	 *
 	 * @since 0.1.0
-	 * @param object $term
+	 * @param WP_Term|false $term
+	 * @return void
 	 */
 	public function term_order_edit_form_field( $term = false ) {
+			if ( ! $term instanceof WP_Term ) {
+				return;
+			}
 
 		// Default classes
 		$classes = array(
@@ -720,7 +736,7 @@ final class WP_Term_Order {
 				</label>
 			</th>
 			<td>
-				<input name="order" id="order" type="text" value="<?php echo esc_attr( $this->get_term_order( $term->term_id ) ); ?>" size="11" />
+				<input name="order" id="order" type="text" value="<?php echo esc_attr( (string) $this->get_term_order( $term->term_id ) ); ?>" size="11" />
 				<p class="description">
 					<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 				</p>
@@ -737,6 +753,7 @@ final class WP_Term_Order {
 	 * @param string $column_name
 	 * @param string $screen
 	 * @param string $name
+	 * @return false|void
 	 */
 	public function quick_edit_term_order( $column_name = '', $screen = '', $name = '' ) {
 
@@ -781,10 +798,10 @@ final class WP_Term_Order {
 	 * Maybe filter the terms query clauses.
 	 *
 	 * @since 2.0.0
-	 * @param array $clauses
-	 * @param array $taxonomies
-	 * @param array $args
-	 * @return array
+	 * @param array<string, string> $clauses
+	 * @param array<int, string> $taxonomies
+	 * @param array<string, mixed> $args
+	 * @return array<string, string>
 	 */
 	public function terms_clauses( $clauses = array(), $taxonomies = array(), $args = array() ) {
 
@@ -813,7 +830,7 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 * @param  string $orderby
-	 * @param  array  $args
+	 * @param  array<string, mixed> $args
 	 * @return string
 	 */
 	public function get_terms_orderby( $orderby = 't.name', $args = array() ) {
@@ -979,6 +996,7 @@ final class WP_Term_Order {
 	 * Runs on `admin_init` hook.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	private function maybe_upgrade_database() {
 
@@ -997,6 +1015,7 @@ final class WP_Term_Order {
 	 * @since 0.1.0
 	 * @param  int    $old_version
 	 * @global object $wpdb
+	 * @return void
 	 */
 	private function upgrade_database( $old_version = 0 ) {
 		global $wpdb;
@@ -1027,7 +1046,7 @@ final class WP_Term_Order {
 				foreach ( $terms as $term ) {
 
 					// Skip if not set
-					if ( ! isset( $term->order ) || empty( $term->taxonomy ) ) {
+					if ( ! is_object( $term ) || ! isset( $term->term_id, $term->order ) || empty( $term->taxonomy ) ) {
 						continue;
 					}
 
@@ -1052,6 +1071,7 @@ final class WP_Term_Order {
 	 * Handle AJAX term reordering
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function ajax_reordering_terms() {
 
@@ -1101,7 +1121,7 @@ final class WP_Term_Order {
 
 		// Bail if term cannot be found
 		$term = get_term( $term_id, $taxonomy );
-		if ( empty( $term ) || is_wp_error( $term ) ) {
+		if ( ! $term instanceof WP_Term ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Term not found', 'wp-term-order' ) ) );
 		}
 
@@ -1151,7 +1171,7 @@ final class WP_Term_Order {
 			'taxonomy'   => $taxonomy,
 			'depth'      => 1,
 			'number'     => 100,
-			'parent'     => $parent_id,
+			'parent'     => (int) $parent_id,
 			'orderby'    => 'order',
 			'order'      => 'ASC',
 			'hide_empty' => false,
@@ -1272,6 +1292,7 @@ endif;
  * Instantiate the main WordPress Term Order class
  *
  * @since 0.1.0
+ * @return WP_Term_Order
  */
 function _wp_term_order() {
 	static $wp_term_order = null;

@@ -121,4 +121,58 @@ final class TermOrderTest extends TestCase {
 		$this->assertArrayNotHasKey( 'clean_term_cache', $GLOBALS['wpto_test']['calls'] ?? array() );
 		$this->assertSame( array( 7, 'order', 4 ), $GLOBALS['wpto_test']['calls']['update_term_meta'][0] );
 	}
+
+	/** Confirm real terms use the order column while false and errors use term meta. */
+	public function test_term_order_falls_back_to_metadata_for_missing_or_error_terms(): void {
+		$GLOBALS['wpto_test']['returns']['get_term'] = new WP_Term( 7, 0, 9 );
+		$this->assertSame( 9, $this->plugin->get_term_order( 7 ) );
+
+		$GLOBALS['wpto_test']['returns']['get_term_meta'] = '4';
+
+		$GLOBALS['wpto_test']['returns']['get_term'] = false;
+		$this->assertSame( 4, $this->plugin->get_term_order( 7 ) );
+
+		$GLOBALS['wpto_test']['returns']['get_term'] = new WP_Error();
+		$this->assertSame( 4, $this->plugin->get_term_order( 7 ) );
+	}
+
+	/** Confirm AJAX rejects missing terms and errors before using their fields. */
+	public function test_ajax_reordering_rejects_missing_and_error_terms(): void {
+		$_POST = array(
+			'id'     => 7,
+			'tax'    => 'category',
+			'previd' => 0,
+			'nextid' => 0,
+		);
+		foreach ( array( false, new WP_Error() ) as $missing_term ) {
+			$GLOBALS['wpto_test']['returns']['get_term'] = $missing_term;
+			try {
+				$this->plugin->ajax_reordering_terms();
+				$this->fail( 'Expected an error JSON response.' );
+			} catch ( RuntimeException $response ) {
+				$this->assertSame( 'Term not found', $response->getMessage() );
+			}
+		}
+	}
+
+	/** Confirm AJAX stops when the sibling query returns a WordPress error. */
+	public function test_ajax_reordering_rejects_sibling_query_errors(): void {
+		$_POST = array(
+			'id'     => 7,
+			'tax'    => 'category',
+			'previd' => 0,
+			'nextid' => 0,
+		);
+
+		$GLOBALS['wpto_test']['returns']['get_term'] = new WP_Term( 7 );
+
+		$GLOBALS['wpto_test']['returns']['get_terms'] = new WP_Error();
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected an error JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'Failed to get siblings', $response->getMessage() );
+		}
+	}
 }

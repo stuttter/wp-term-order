@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 define( 'ABSPATH', dirname( __DIR__ ) . '/' );
 
+require_once __DIR__ . '/class-wp-term.php';
+
 $GLOBALS['wpto_test'] = array();
 
 function wpto_test_call( $name, $arguments ) {
@@ -29,6 +31,66 @@ function get_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $
 function update_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function clean_term_cache( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function do_action( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
+
+/**
+ * Record the AJAX nonce check.
+ *
+ * @param mixed ...$arguments Nonce arguments.
+ */
+function check_ajax_referer( ...$arguments ) {
+	return wpto_test_call( __FUNCTION__, $arguments );
+}
+
+/**
+ * Normalize an integer in the AJAX fixture.
+ *
+ * @param mixed $value Raw value.
+ */
+function absint( $value ) {
+	return abs( (int) $value );
+}
+
+/**
+ * Resolve a taxonomy in the AJAX fixture.
+ *
+ * @param string $taxonomy Taxonomy name.
+ */
+function get_taxonomy( $taxonomy ) {
+	return (object) array( 'name' => $taxonomy );
+}
+
+/** Permit editing in the AJAX fixture. */
+function current_user_can() {
+	return true;
+}
+
+/**
+ * Return translated text unchanged in the AJAX fixture.
+ *
+ * @param string $text Translatable text.
+ */
+function esc_html__( $text ) {
+	return $text;
+}
+
+/**
+ * Capture a JSON error without ending the PHPUnit process.
+ *
+ * @param array<string, string> $data Response data.
+ * @throws RuntimeException Always captures the response.
+ */
+function wp_send_json_error( $data ) {
+	throw new RuntimeException( $data['message'] ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test response is intentionally raw.
+}
+
+/**
+ * Return the get_terms fixture.
+ *
+ * @param mixed ...$arguments Query arguments.
+ */
+function get_terms( ...$arguments ) {
+	return wpto_test_call( __FUNCTION__, $arguments );
+}
 
 class WP_Error {}
 

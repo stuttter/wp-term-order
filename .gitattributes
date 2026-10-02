@@ -12,5 +12,7 @@
 /composer.json export-ignore
 /composer.lock export-ignore
 /phpcs-baseline.json export-ignore
+/phpstan.neon.dist export-ignore
+/phpstan-wordpress-compat.stub export-ignore
 /phpunit.xml.dist export-ignore
 /tests export-ignore
