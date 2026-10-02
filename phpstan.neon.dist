@@ -1,3 +1,6 @@
+includes:
+    - vendor/johnbillion/wp-compat/extension.neon
+
 parameters:
     level: 7
     phpVersion: 70400
@@ -10,3 +13,5 @@ parameters:
     tmpDir: build/phpstan
     parallel:
         maximumNumberOfProcesses: 1
+    WPCompat:
+        pluginFile: wp-term-order.php
