@@ -1136,6 +1136,7 @@ final class WP_Term_Order {
 		// Default return values
 		$retval  = new stdClass;
 		$new_pos = array();
+		$reload  = isset( $_POST['reload'] ) && 1 === absint( wp_unslash( $_POST['reload'] ) ); // phpcs:ignore Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 
 		// attempt to get the intended parent...
 		$parent_id        = $term->parent;
@@ -1166,6 +1167,23 @@ final class WP_Term_Order {
 			$nextid = false;
 		}
 
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+		$parent_id      = max( 0, (int) $parent_id );
+		$parent_changed = is_taxonomy_hierarchical( $taxonomy ) && (int) $term->parent !== $parent_id;
+
+		if ( $parent_changed ) {
+			$parent_ancestors = $parent_id
+				? array_map( 'intval', get_ancestors( $parent_id, $taxonomy, 'taxonomy' ) )
+				: array();
+
+			if ( $term_id === $parent_id || in_array( $term_id, $parent_ancestors, true ) ) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Invalid term parent', 'wp-term-order' ) ) );
+			}
+
+			$reload = true;
+		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
+
 		// Get term siblings for relative ordering
 		$siblings = get_terms( array(
 			'taxonomy'   => $taxonomy,
@@ -1183,14 +1201,16 @@ final class WP_Term_Order {
 			wp_send_json_error( array( 'message' => esc_html__( 'Failed to get siblings', 'wp-term-order' ) ) );
 		}
 
-			// A move between sibling groups must update the term's actual hierarchy.
-			if ( is_taxonomy_hierarchical( $taxonomy ) && (int) $term->parent !== (int) $parent_id ) {
-				$updated = wp_update_term( $term->term_id, $taxonomy, array( 'parent' => max( 0, (int) $parent_id ) ) );
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+		// A move between sibling groups must update the term's actual hierarchy.
+		if ( $parent_changed ) {
+			$updated = wp_update_term( $term->term_id, $taxonomy, array( 'parent' => $parent_id ) );
 
-				if ( is_wp_error( $updated ) ) {
-					wp_send_json_error( array( 'message' => esc_html__( 'Failed to update term parent', 'wp-term-order' ) ) );
-				}
+			if ( is_wp_error( $updated ) ) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Failed to update term parent', 'wp-term-order' ) ) );
 			}
+		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Loop through siblings and update terms
 		foreach ( $siblings as $sibling ) {
@@ -1264,7 +1284,8 @@ final class WP_Term_Order {
 				'nextid'   => $nextid,
 				'start'    => $start,
 				'excluded' => array_unique( array_merge( array_keys( $new_pos ), $excluded ) ),
-				'taxonomy' => $taxonomy
+				'taxonomy' => $taxonomy,
+				'reload'   => $reload ? 1 : 0,
 			);
 		} else {
 			$retval->next = false;
@@ -1291,6 +1312,7 @@ final class WP_Term_Order {
 
 		// Add to return value
 		$retval->new_pos = $new_pos;
+		$retval->reload  = $reload; // phpcs:ignore Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 
 		wp_send_json_success( $retval );
 	}

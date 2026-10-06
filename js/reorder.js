@@ -172,8 +172,15 @@ function term_order_update_callback( response, post ) {
 			nextid:   changes.next['nextid'],
 			start:    changes.next['start'],
 			excluded: changes.next['excluded'],
-			tax:      taxonomy
+			tax:      taxonomy,
+			reload:   changes.next['reload']
 		}, term_order_update_callback );
+	}
+
+	// Refresh hierarchy-dependent row markup after the final batch.
+	if ( ! changes.next && changes.reload ) {
+		window.location.reload();
+		return;
 	}
 
 	// Update and more clean-up
