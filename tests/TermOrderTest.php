@@ -224,7 +224,7 @@ final class TermOrderTest extends TestCase {
 			'tax'    => 'category',
 			'parent' => '1',
 			'previd' => '4',
-			'nextid' => '',
+			'nextid' => '0',
 		);
 
 		$GLOBALS['wpto_test']['returns'] = array(
@@ -268,8 +268,8 @@ final class TermOrderTest extends TestCase {
 			'id'     => '3',
 			'tax'    => 'category',
 			'parent' => '6',
-			'previd' => '',
-			'nextid' => '',
+			'previd' => '0',
+			'nextid' => '0',
 		);
 
 		$GLOBALS['wpto_test']['returns'] = array(

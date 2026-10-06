@@ -133,15 +133,70 @@ function term_order_last_row( node ) {
 }
 
 /**
+ * Return the final row in a node's subtree outside the moving subtree.
+ *
+ * @param {object} node  Tree node.
+ * @param {Array}  moved Nodes in the moving subtree.
+ * @returns {jQuery}
+ */
+function term_order_last_slot_row( node, moved ) {
+	var available = jQuery.grep( [ node ].concat( term_order_descendants( node ) ), function( current ) {
+		return -1 === jQuery.inArray( current, moved );
+	} );
+
+	return available[ available.length - 1 ].element;
+}
+
+/**
+ * Return a term name without WordPress's visual hierarchy prefix.
+ *
+ * @param {object} node Tree node.
+ * @returns {string}
+ */
+function term_order_node_label( node ) {
+	return node.element.find( '.row-title' ).first().text().replace( /^(?:\s*—\s*)+/, '' );
+}
+
+/**
+ * Build a compact tree preview for the dragged subtree.
+ *
+ * @param {jQuery} row Term row.
+ * @returns {jQuery}
+ */
+function term_order_build_helper( row ) {
+	var tree = term_order_build_tree(),
+		node = term_order_find_node( tree, row ),
+		helper = jQuery( '<div class="term-order-subtree-helper" />' ),
+		nodes;
+
+	if ( ! node ) {
+		return row;
+	}
+
+	nodes = [ node ].concat( term_order_descendants( node ) );
+
+	jQuery.each( nodes, function( index, current ) {
+		jQuery( '<div class="term-order-helper-item" />' )
+			.toggleClass( 'term-order-helper-root', 0 === index )
+			.css( 'padding-left', 12 + ( ( current.level - node.level ) * 20 ) )
+			.text( term_order_node_label( current ) )
+			.appendTo( helper );
+	} );
+
+	return helper;
+}
+
+/**
  * Add the insertion points for one sibling group.
  *
  * @param {Array}       slots    Destination slots.
  * @param {object|null} parent   Parent node, or null for root terms.
  * @param {Array}       children Children in this group.
  * @param {object}      dragged  Dragged node.
+ * @param {Array}       moved    Nodes in the moving subtree.
  * @returns {void}
  */
-function term_order_add_group_slots( slots, parent, children, dragged ) {
+function term_order_add_group_slots( slots, parent, children, dragged, moved ) {
 	var remaining = jQuery.grep( children, function( child ) {
 		return child !== dragged && child.scoped;
 	} ),
@@ -176,7 +231,7 @@ function term_order_add_group_slots( slots, parent, children, dragged ) {
 
 	jQuery.each( remaining, function( index, sibling ) {
 		slots.push( {
-			anchor:   term_order_last_row( sibling ),
+			anchor:   term_order_last_slot_row( sibling, moved ),
 			depth:    depth,
 			nextid:   remaining[ index + 1 ] ? remaining[ index + 1 ].id : false,
 			parent:   parent,
@@ -199,11 +254,11 @@ function term_order_build_slots( node, roots ) {
 		moved = [ node ].concat( term_order_descendants( node ) ),
 		parents = term_order_flatten_tree( roots );
 
-	term_order_add_group_slots( slots, null, roots, node );
+	term_order_add_group_slots( slots, null, roots, node, moved );
 
 	jQuery.each( parents, function( index, parent ) {
 		if ( parent.scoped && -1 === jQuery.inArray( parent, moved ) ) {
-			term_order_add_group_slots( slots, parent, parent.children, node );
+			term_order_add_group_slots( slots, parent, parent.children, node, moved );
 		}
 	} );
 
@@ -216,30 +271,32 @@ function term_order_build_slots( node, roots ) {
  * @param {Array}  slots Slots in the visible hierarchy.
  * @param {number} pageX Pointer horizontal position.
  * @param {number} pageY Pointer position.
- * @param {number} baseX Left edge for root terms.
+ * @param {number} originX Pointer position when dragging started.
+ * @param {number} originDepth Original hierarchy depth.
  * @returns {object|null}
  */
-function term_order_closest_slot( slots, pageX, pageY, baseX ) {
+function term_order_closest_slot( slots, pageX, pageY, originX, originDepth ) {
 	var closest = null,
-		distance = Number.MAX_VALUE;
+		distance = Number.MAX_VALUE,
+		depthDistance = Number.MAX_VALUE,
+		targetDepth = Math.max( 0, originDepth + Math.round( ( pageX - originX ) / 24 ) );
 
 	jQuery.each( slots, function( index, slot ) {
 		var top = slot.anchor.offset().top,
 			vertical,
-			horizontal,
-			score;
+			slotDepthDistance;
 
 		if ( 'after' === slot.type ) {
 			top += slot.anchor.outerHeight();
 		}
 
 		vertical = Math.abs( pageY - top );
-		horizontal = Math.abs( pageX - ( baseX + ( slot.depth * 24 ) ) );
-		score = ( vertical * 4 ) + horizontal;
+		slotDepthDistance = Math.abs( targetDepth - slot.depth );
 
-		if ( score < distance ) {
+		if ( slotDepthDistance < depthDistance || ( slotDepthDistance === depthDistance && vertical < distance ) ) {
 			closest = slot;
-			distance = score;
+			distance = vertical;
+			depthDistance = slotDepthDistance;
 		}
 	} );
 
@@ -266,26 +323,39 @@ function term_order_show_slot( slot ) {
 		label = wpTermOrder.under + ' ' + slot.parent.element.find( '.row-title' ).first().text();
 	}
 
-	drag_state.node.element.find( '.term-order-parent-target' ).text( label );
+	drag_state.helper.find( '.term-order-parent-target' ).text( label );
 }
 
 /**
- * Place the sortable placeholder at a valid sibling boundary.
+ * Place the moved row at a valid sibling boundary.
  *
  * @param {object} slot Valid insertion point.
- * @param {object} ui   Sortable UI data.
+ * @param {jQuery} item Moved term row.
  * @returns {void}
  */
-function term_order_place_placeholder( slot, ui ) {
+function term_order_place_item( slot, item ) {
 	if ( ! slot ) {
 		return;
 	}
 
 	if ( 'before' === slot.type ) {
-		ui.placeholder.insertBefore( slot.anchor );
+		item.insertBefore( slot.anchor );
 	} else {
-		ui.placeholder.insertAfter( slot.anchor );
+		item.insertAfter( slot.anchor );
 	}
+}
+
+/**
+ * Return whether a slot changes the dragged term's sibling position.
+ *
+ * @param {object} state Active drag state.
+ * @param {object} slot  Destination slot.
+ * @returns {boolean}
+ */
+function term_order_slot_changed( state, slot ) {
+	return state.original_parentid !== slot.parentid ||
+		state.original_previd !== slot.previd ||
+		state.original_nextid !== slot.nextid;
 }
 
 /**
@@ -311,7 +381,7 @@ function term_order_insert_descendants( state ) {
 function term_order_clear_drag_styles() {
 	sortable_terms_table.children( 'tr' )
 		.removeClass( 'term-order-drag-group term-order-drop-before term-order-drop-after' );
-	sortable_terms_table.find( '.term-order-subtree-count, .term-order-parent-target' ).remove();
+	jQuery( '.term-order-subtree-helper .term-order-parent-target' ).remove();
 }
 
 /**
@@ -338,11 +408,47 @@ function term_order_restore_subtree() {
 }
 
 /**
+ * Submit a term's new sibling position.
+ *
+ * @param {jQuery}        item     Moved term row.
+ * @param {number}        parentid Parent term ID, when hierarchy is supported.
+ * @param {number|boolean} previd  Previous sibling term ID.
+ * @param {number|boolean} nextid  Next sibling term ID.
+ * @returns {void}
+ */
+function term_order_submit_update( item, parentid, previd, nextid ) {
+	var termid = item.attr( 'id' ).replace( 'tag-', '' ),
+		request = {
+			action: 'reordering_terms',
+			nonce:  wpTermOrder.nonce,
+			id:     termid,
+			previd: previd || 0,
+			nextid: nextid || 0,
+			tax:    taxonomy
+		};
+
+	if ( typeof parentid !== 'undefined' ) {
+		request.parent = parentid;
+	}
+
+	term_row = item;
+
+	sortable_terms_table
+		.addClass( 'to-updating' )
+		.sortable( 'disable' );
+
+	term_row.addClass( 'to-row-updating' );
+
+	jQuery.post( ajaxurl, request, term_order_update_callback );
+}
+
+/**
  * Fancy drag and drop sortable UI for terms.
  *
  * @since 1.0.0
  */
 sortable_terms_table.sortable( {
+	appendTo:  'body',
 	items:     '> tr:not(.no-items)',
 	cancel:    '.inline-edit-row',
 	cursor:    'move',
@@ -362,7 +468,8 @@ sortable_terms_table.sortable( {
 		var tree,
 			node,
 			descendants,
-			name_column;
+			siblings,
+			node_index;
 
 		if ( typeof inlineEditTax !== 'undefined' ) {
 			inlineEditTax.revert();
@@ -383,15 +490,19 @@ sortable_terms_table.sortable( {
 		}
 
 		descendants = term_order_descendants( node );
-		name_column = node.element.find( '.column-name' );
+		siblings = node.parent ? node.parent.children : tree;
+		node_index = jQuery.inArray( node, siblings );
 		drag_state = {
-			base_x:        name_column.length
-				? name_column.offset().left + 24
-				: node.element.find( '.row-title' ).first().offset().left - ( node.level * 24 ),
 			chosen:        null,
 			descendants:   descendants,
+			helper:        ui.helper,
 			node:          node,
 			original_next: term_order_last_row( node ).nextAll( 'tr:not(.ui-sortable-placeholder)' ).first(),
+			original_nextid: siblings[ node_index + 1 ] ? siblings[ node_index + 1 ].id : false,
+			original_parentid: node.parent ? node.parent.id : 0,
+			original_previd: node_index > 0 ? siblings[ node_index - 1 ].id : false,
+			origin_depth:  node.level,
+			origin_x:      e.pageX,
 			scoped:        node.scoped,
 			slots:         [],
 			submitted:     false,
@@ -408,23 +519,14 @@ sortable_terms_table.sortable( {
 			drag_state.slots = term_order_build_slots( node, tree );
 		}
 
-		node.element.find( '.row-title' ).first().append(
+		ui.helper.find( '.term-order-helper-root' ).first().append(
 			jQuery( '<span class="term-order-parent-target" />' )
 				.text( node.parent ? wpTermOrder.under + ' ' + node.parent.element.find( '.row-title' ).first().text() : wpTermOrder.topLevel )
 		);
-
-		if ( descendants.length ) {
-			node.element.find( '.row-title' ).first().append(
-				jQuery( '<span class="term-order-subtree-count" />' )
-					.attr( 'aria-label', wpTermOrder.subtree )
-					.attr( 'title', wpTermOrder.subtree )
-					.text( '+' + descendants.length )
-			);
-		}
 	},
 
 	/**
-	 * Keep the placeholder at the closest sibling boundary.
+	 * Show the closest sibling boundary.
 	 *
 	 * @param {Event}  e  Sort event.
 	 * @param {object} ui Sortable UI data.
@@ -437,19 +539,23 @@ sortable_terms_table.sortable( {
 			return;
 		}
 
-		chosen = term_order_closest_slot( drag_state.slots, e.pageX, e.pageY, drag_state.base_x );
-
+		chosen = term_order_closest_slot(
+			drag_state.slots,
+			e.pageX,
+			e.pageY,
+			drag_state.origin_x,
+			drag_state.origin_depth
+		);
 		if ( chosen === drag_state.chosen ) {
 			return;
 		}
 
 		drag_state.chosen = chosen;
-		term_order_place_placeholder( chosen, ui );
 		term_order_show_slot( chosen );
 	},
 
 	/**
-	 * Fix the final placeholder before Sortable updates the table.
+	 * Place the row at the selected hierarchy boundary.
 	 *
 	 * @param {Event}  e  Sort event.
 	 * @param {object} ui Sortable UI data.
@@ -457,23 +563,19 @@ sortable_terms_table.sortable( {
 	 */
 	beforeStop: function( e, ui ) {
 		if ( drag_state && drag_state.scoped && drag_state.chosen ) {
-			term_order_place_placeholder( drag_state.chosen, ui );
+			term_order_place_item( drag_state.chosen, ui.item );
 		}
 	},
 
 	/**
-	 * Preserve cell widths while dragging.
+	 * Show the dragged subtree as a compact tree.
 	 *
 	 * @param {Event}  e  Sort event.
 	 * @param {jQuery} ui Term row.
 	 * @returns {jQuery}
 	 */
 	helper: function( e, ui ) {
-		ui.children().each( function() {
-			jQuery( this ).width( jQuery( this ).width() );
-		} );
-
-		return ui;
+		return term_order_build_helper( ui );
 	},
 
 	/**
@@ -484,14 +586,29 @@ sortable_terms_table.sortable( {
 	 * @returns {void}
 	 */
 	stop: function( e, ui ) {
+		var state = drag_state;
+
 		ui.item.children( '.row-actions' ).show();
 		ui.item.parent().parent().removeClass( 'dragging' );
 
-		if ( drag_state ) {
-			term_order_insert_descendants( drag_state );
+		if ( state ) {
+			if ( state.scoped && ! state.chosen ) {
+				term_order_restore_subtree();
+			} else {
+				term_order_insert_descendants( state );
+			}
+
 			term_order_clear_drag_styles();
 
-			if ( ! drag_state.submitted ) {
+			if ( state.scoped && state.chosen && term_order_slot_changed( state, state.chosen ) ) {
+				state.submitted = true;
+				term_order_submit_update(
+					ui.item,
+					state.chosen.parentid,
+					state.chosen.previd,
+					state.chosen.nextid
+				);
+			} else if ( ! state.submitted ) {
 				drag_state = null;
 			}
 		}
@@ -506,54 +623,22 @@ sortable_terms_table.sortable( {
 	 */
 	update: function( e, ui ) {
 		var strlen = 4,
-			termid = ui.item[ 0 ].id.substr( strlen ),
 			prevtermid = false,
-			nexttermid = false,
-			parentid,
-			request;
+			nexttermid = false;
 
 		if ( drag_state && drag_state.scoped ) {
-			if ( ! drag_state.chosen ) {
-				term_order_restore_subtree();
-				return;
-			}
-
-			prevtermid = drag_state.chosen.previd;
-			nexttermid = drag_state.chosen.nextid;
-			parentid = drag_state.chosen.parentid;
-			drag_state.submitted = true;
-		} else {
-			if ( ui.item.prev().length ) {
-				prevtermid = ui.item.prev().attr( 'id' ).substr( strlen );
-			}
-
-			if ( ui.item.next().length ) {
-				nexttermid = ui.item.next().attr( 'id' ).substr( strlen );
-			}
+			return;
 		}
 
-		term_row = ui.item;
-
-		sortable_terms_table
-			.addClass( 'to-updating' )
-			.sortable( 'disable' );
-
-		term_row.addClass( 'to-row-updating' );
-
-		request = {
-			action: 'reordering_terms',
-			nonce:  wpTermOrder.nonce,
-			id:     termid,
-			previd: prevtermid,
-			nextid: nexttermid,
-			tax:    taxonomy
-		};
-
-		if ( typeof parentid !== 'undefined' ) {
-			request.parent = parentid;
+		if ( ui.item.prev().length ) {
+			prevtermid = ui.item.prev().attr( 'id' ).substr( strlen );
 		}
 
-		jQuery.post( ajaxurl, request, term_order_update_callback );
+		if ( ui.item.next().length ) {
+			nexttermid = ui.item.next().attr( 'id' ).substr( strlen );
+		}
+
+		term_order_submit_update( ui.item, undefined, prevtermid, nexttermid );
 	}
 } );
 
