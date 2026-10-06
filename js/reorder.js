@@ -247,30 +247,23 @@ function term_order_closest_slot( slots, pageX, pageY, baseX ) {
 }
 
 /**
- * Show the sibling group and parent selected by a slot.
+ * Show the insertion boundary and parent selected by a slot.
  *
  * @param {object} slot Destination slot.
  * @returns {void}
  */
 function term_order_show_slot( slot ) {
-	var siblings = slot.parent ? slot.parent.children : drag_state.tree,
-		label = wpTermOrder.topLevel;
+	var label = wpTermOrder.topLevel;
 
-	sortable_terms_table.children( 'tr:not(.no-items)' )
-		.addClass( 'term-order-drop-blocked' )
-		.removeClass( 'term-order-drop-target' );
+	sortable_terms_table.children( 'tr' )
+		.removeClass( 'term-order-drop-before term-order-drop-after' );
 
-	jQuery.each( siblings, function( index, sibling ) {
-		if ( sibling !== drag_state.node && sibling.scoped ) {
-			sibling.element
-				.removeClass( 'term-order-drop-blocked' )
-				.addClass( 'term-order-drop-target' );
-		}
-	} );
+	slot.anchor.addClass(
+		'before' === slot.type ? 'term-order-drop-before' : 'term-order-drop-after'
+	);
 
 	if ( slot.parent ) {
 		label = wpTermOrder.under + ' ' + slot.parent.element.find( '.row-title' ).first().text();
-		slot.parent.element.removeClass( 'term-order-drop-blocked' );
 	}
 
 	drag_state.node.element.find( '.term-order-parent-target' ).text( label );
@@ -305,7 +298,7 @@ function term_order_insert_descendants( state ) {
 	var anchor = state.node.element;
 
 	jQuery.each( state.descendants, function( index, descendant ) {
-		descendant.element.insertAfter( anchor );
+		descendant.element.insertAfter( anchor ).show();
 		anchor = descendant.element;
 	} );
 }
@@ -317,7 +310,7 @@ function term_order_insert_descendants( state ) {
  */
 function term_order_clear_drag_styles() {
 	sortable_terms_table.children( 'tr' )
-		.removeClass( 'term-order-drag-group term-order-drop-target term-order-drop-blocked' );
+		.removeClass( 'term-order-drag-group term-order-drop-before term-order-drop-after' );
 	sortable_terms_table.find( '.term-order-subtree-count, .term-order-parent-target' ).remove();
 }
 
@@ -332,7 +325,7 @@ function term_order_restore_subtree() {
 	}
 
 	jQuery.each( drag_state.descendants, function( index, descendant ) {
-		descendant.element.detach();
+		descendant.element.hide();
 	} );
 
 	if ( drag_state.original_next.length ) {
@@ -379,7 +372,7 @@ sortable_terms_table.sortable( {
 			ui.placeholder.children().last().remove();
 		}
 
-		ui.placeholder.height( ui.item.height() );
+		ui.placeholder.height( 4 );
 		ui.item.parent().parent().addClass( 'dragging' );
 
 		tree = term_order_build_tree();
@@ -405,11 +398,10 @@ sortable_terms_table.sortable( {
 			tree:          tree
 		};
 
-		sortable_terms_table.children( 'tr:not(.no-items)' ).addClass( 'term-order-drop-blocked' );
 		node.element.addClass( 'term-order-drag-group' );
 
 		jQuery.each( descendants, function( index, descendant ) {
-			descendant.element.addClass( 'term-order-drag-group' ).detach();
+			descendant.element.addClass( 'term-order-drag-group' ).hide();
 		} );
 
 		if ( node.scoped ) {
@@ -439,13 +431,21 @@ sortable_terms_table.sortable( {
 	 * @returns {void}
 	 */
 	sort: function( e, ui ) {
+		var chosen;
+
 		if ( ! drag_state || ! drag_state.scoped || ! drag_state.slots.length ) {
 			return;
 		}
 
-		drag_state.chosen = term_order_closest_slot( drag_state.slots, e.pageX, e.pageY, drag_state.base_x );
-		term_order_place_placeholder( drag_state.chosen, ui );
-		term_order_show_slot( drag_state.chosen );
+		chosen = term_order_closest_slot( drag_state.slots, e.pageX, e.pageY, drag_state.base_x );
+
+		if ( chosen === drag_state.chosen ) {
+			return;
+		}
+
+		drag_state.chosen = chosen;
+		term_order_place_placeholder( chosen, ui );
+		term_order_show_slot( chosen );
 	},
 
 	/**

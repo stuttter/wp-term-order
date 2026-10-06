@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070003;
+	public $db_version = 202602070004;
 
 	/**
 	 * @var string Database version
@@ -380,9 +380,18 @@ final class WP_Term_Order {
 			}
 
 			.wp-list-table .ui-sortable-placeholder {
-				outline: 1px dashed #bbb;
-				background: #f1f1f1 !important;
+				height: 4px !important;
+				outline: 0;
+				background: transparent !important;
 				visibility: visible !important;
+			}
+
+			.wp-list-table .ui-sortable-placeholder > * {
+				height: 0 !important;
+				padding-top: 0 !important;
+				padding-bottom: 0 !important;
+				border: 0 !important;
+				line-height: 0 !important;
 			}
 
 			.wp-list-table .ui-sortable-helper {
@@ -391,13 +400,14 @@ final class WP_Term_Order {
 				box-shadow: 0 3px 6px rgba(0, 0, 0, 0.175);
 			}
 
-			.wp-list-table .term-order-drop-blocked {
-				opacity: 0.45;
+			.wp-list-table .term-order-drop-before > th,
+			.wp-list-table .term-order-drop-before > td {
+				box-shadow: inset 0 3px #2271b1;
 			}
 
-			.wp-list-table .term-order-drop-target > th,
-			.wp-list-table .term-order-drop-target > td {
-				box-shadow: inset 3px 0 #2271b1;
+			.wp-list-table .term-order-drop-after > th,
+			.wp-list-table .term-order-drop-after > td {
+				box-shadow: inset 0 -3px #2271b1;
 			}
 
 			.wp-list-table .term-order-subtree-count {
