@@ -259,6 +259,136 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * An explicit request for term order is not an implicit override.
+	 *
+	 * @dataProvider explicitOrderStrategies
+	 * @param string $strategy Database storage strategy.
+	 * @param string $expected Expected orderby clause.
+	 */
+	public function test_explicit_order_is_not_disabled_with_implicit_override( string $strategy, string $expected ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_taxonomy_override_orderby_supported'] = static function () {
+			return false;
+		};
+		$query_args = array(
+			'taxonomy' => array( 'category' ),
+			'orderby'  => 'order',
+		);
+
+		$this->assertSame(
+			$expected,
+			$this->plugin->get_terms_orderby( 'anything', $query_args )
+		);
+
+		if ( 'meta' === $strategy ) {
+			$this->assert_meta_order_clauses( $query_args );
+		}
+
+		foreach ( array( false, 0, '0', 'false', 'FALSE' ) as $override ) {
+			$query_args['wp_term_order_override'] = $override;
+
+			$this->assertSame(
+				$expected,
+				$this->plugin->get_terms_orderby( 'anything', $query_args )
+			);
+
+			if ( 'meta' === $strategy ) {
+				$this->assert_meta_order_clauses( $query_args );
+			}
+		}
+	}
+
+	/**
+	 * Assert that the metadata strategy supplies the alias used for ordering.
+	 *
+	 * @param array<string, mixed> $args Query arguments.
+	 */
+	private function assert_meta_order_clauses( array $args ): void {
+		$clauses = $this->plugin->terms_clauses(
+			array(
+				'join'  => '',
+				'where' => '',
+			),
+			array( 'category' ),
+			$args
+		);
+
+		$this->assertStringContainsString( 'AS order_clause', $clauses['join'] );
+		$this->assertStringContainsString( 'order_clause.meta_key', $clauses['where'] );
+	}
+
+	/**
+	 * Explicit ordering does not make an unsupported taxonomy eligible.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Database storage strategy.
+	 */
+	public function test_explicit_order_preserves_unsupported_taxonomy_orderby( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$this->assertSame(
+			'original order',
+			$this->plugin->get_terms_orderby(
+				'original order',
+				array(
+					'taxonomy' => array( 'private_taxonomy' ),
+					'orderby'  => 'order',
+				)
+			)
+		);
+	}
+
+	/**
+	 * A single query can preserve its requested ordering.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Database storage strategy.
+	 */
+	public function test_query_can_disable_implicit_orderby_override( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		foreach ( array( false, 0, '0', 'false', 'False', 'FALSE', '' ) as $override ) {
+			$this->assertSame(
+				't.name',
+				$this->plugin->get_terms_orderby(
+					't.name',
+					array(
+						'taxonomy'               => array( 'category' ),
+						'orderby'                => 'name',
+						'wp_term_order_override' => $override,
+					)
+				)
+			);
+		}
+	}
+
+	/**
+	 * True-like query values preserve the implicit ordering override.
+	 *
+	 * @dataProvider implicitOrderStrategies
+	 * @param string $strategy Database storage strategy.
+	 * @param string $expected Expected orderby clause.
+	 */
+	public function test_true_query_values_preserve_implicit_orderby_override( string $strategy, string $expected ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		foreach ( array( true, 1, '1', 'true' ) as $override ) {
+			$this->assertSame(
+				$expected,
+				$this->plugin->get_terms_orderby(
+					't.name',
+					array(
+						'taxonomy'               => array( 'category' ),
+						'orderby'                => 'name',
+						'wp_term_order_override' => $override,
+					)
+				)
+			);
+		}
+	}
+
 	public function test_default_name_order_uses_column_order_with_name_tiebreaker(): void {
 		$this->assertSame(
 			'tt.order, t.name',
@@ -270,6 +400,30 @@ final class TermOrderTest extends TestCase {
 		$this->assertSame(
 			'tt.order',
 			$this->plugin->get_terms_orderby( 'anything', array( 'taxonomy' => array( 'category' ), 'orderby' => 'order' ) )
+		);
+	}
+
+	/**
+	 * Database strategies and their explicit orderby clauses.
+	 *
+	 * @return array<string, array<int, string>>
+	 */
+	public static function explicitOrderStrategies(): array {
+		return array(
+			'modified table' => array( 'modify_tables', 'tt.order' ),
+			'term metadata'  => array( 'meta', 'CAST(order_clause.meta_value AS SIGNED)' ),
+		);
+	}
+
+	/**
+	 * Database strategies and their implicit orderby clauses.
+	 *
+	 * @return array<string, array<int, string>>
+	 */
+	public static function implicitOrderStrategies(): array {
+		return array(
+			'modified table' => array( 'modify_tables', 'tt.order, t.name' ),
+			'term metadata'  => array( 'meta', 'CAST(order_clause.meta_value AS SIGNED)' ),
 		);
 	}
 

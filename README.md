@@ -45,6 +45,22 @@ $terms = get_terms( array(
 ) );
 ```
 
+For a supported taxonomy, an explicit `orderby` value of `order` is always
+honored. To preserve a different ordering for one query while leaving WP Term
+Order enabled for its taxonomy, pass `wp_term_order_override` as `false`:
+
+```
+$terms = get_terms( array(
+	'taxonomy'              => 'category',
+	'orderby'               => 'name',
+	'wp_term_order_override' => false,
+) );
+```
+
+The `wp_term_order_taxonomy_override_orderby_supported` filter controls only
+the implicit override of WordPress's default term-name ordering. It does not
+disable an explicit `orderby` value of `order`.
+
 ### Where can I get support?
 
 The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/

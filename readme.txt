@@ -54,6 +54,10 @@ Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
 
 No. Order values are whole numbers. A term's parent is stored separately by WordPress, so use the Parent field to set its hierarchy and the Order field to position it among terms at that level.
 
+= Can I preserve a query's requested term ordering? =
+
+Yes. Pass `wp_term_order_override` as `false` to preserve another `orderby` value for that query. For a supported taxonomy, an explicit `orderby` value of `order` is always honored. The `wp_term_order_taxonomy_override_orderby_supported` filter controls only the implicit override of WordPress's default term-name ordering.
+
 = Where can I get support? =
 
 The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/

@@ -252,7 +252,8 @@ final class WP_Term_Order {
 	/**
 	 * Check if a taxonomy supports overriding the orderby of a WP_Term_Query.
 	 *
-	 * Allows filtering of overriding the orderby specifically.
+	 * Allows filtering of the implicit default-name orderby override specifically.
+	 * An explicit `orderby` value of `order` is handled independently.
 	 *
 	 * @since 2.0.0
 	 * @param array<int, string> $taxonomy
@@ -840,10 +841,23 @@ final class WP_Term_Order {
 			return $orderby;
 		}
 
-		// Bail if taxonomy orderby override not supported
-		if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
-			return $orderby;
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+		// An explicit request for term order is not an implicit override.
+		$explicit_order = isset( $args['orderby'] ) && ( 'order' === $args['orderby'] );
+
+		if ( ! $explicit_order ) {
+
+			// Allow a single query to preserve its requested ordering.
+			if ( isset( $args['wp_term_order_override'] ) && ( false === wp_validate_boolean( $args['wp_term_order_override'] ) ) ) {
+				return $orderby;
+			}
+
+			// Bail if taxonomy orderby override not supported.
+			if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
+				return $orderby;
+			}
 		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Default to not overriding
 		$override = false;
@@ -866,7 +880,7 @@ final class WP_Term_Order {
 		if ( 'modify_tables' === $this->db_strategy ) {
 
 			// Explicitly asking for "order" column
-			if ( 'order' === $args['orderby'] ) {
+			if ( $explicit_order ) {
 				$orderby = 'tt.order';
 
 			// Falling back to "t.name" so we'll guess at an override
@@ -881,7 +895,7 @@ final class WP_Term_Order {
 		// Explicitly meta
 		} elseif ( 'meta' === $this->db_strategy ) {
 			if (
-				( 'order' === $args['orderby'] )
+				$explicit_order
 				||
 				( 't.name' === $orderby )
 				||
