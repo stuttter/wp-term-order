@@ -1183,14 +1183,14 @@ final class WP_Term_Order {
 			wp_send_json_error( array( 'message' => esc_html__( 'Failed to get siblings', 'wp-term-order' ) ) );
 		}
 
-		// A move between sibling groups must update the term's actual hierarchy.
-		if ( $tax->hierarchical && (int) $term->parent !== (int) $parent_id ) {
-			$updated = wp_update_term( $term->term_id, $taxonomy, array( 'parent' => max( 0, (int) $parent_id ) ) );
+			// A move between sibling groups must update the term's actual hierarchy.
+			if ( is_taxonomy_hierarchical( $taxonomy ) && (int) $term->parent !== (int) $parent_id ) {
+				$updated = wp_update_term( $term->term_id, $taxonomy, array( 'parent' => max( 0, (int) $parent_id ) ) );
 
-			if ( is_wp_error( $updated ) ) {
-				wp_send_json_error( array( 'message' => esc_html__( 'Failed to update term parent', 'wp-term-order' ) ) );
+				if ( is_wp_error( $updated ) ) {
+					wp_send_json_error( array( 'message' => esc_html__( 'Failed to update term parent', 'wp-term-order' ) ) );
+				}
 			}
-		}
 
 		// Loop through siblings and update terms
 		foreach ( $siblings as $sibling ) {

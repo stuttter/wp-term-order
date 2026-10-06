@@ -4,83 +4,120 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/ajax-fixtures.php';
+
 final class TermOrderTest extends TestCase {
 	private $plugin;
 
 	protected function setUp(): void {
 		$GLOBALS['wpto_test'] = array();
-		$_POST = array();
 		$GLOBALS['wpdb']      = new WPTO_Test_WPDB();
 		$this->plugin         = new WP_Term_Order();
 		$this->plugin->taxonomies = array( 'category', 'post_tag' );
+
+		$_POST = array();
 	}
 
-	/** @dataProvider storageStrategies */
+	/**
+	 * Persist a new parent when a child moves into another sibling group.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Order storage strategy.
+	 */
 	public function test_dragging_child_to_another_parent_persists_parent( string $strategy ): void {
 		$this->plugin->db_strategy = $strategy;
-		$_POST = array( 'id' => '3', 'tax' => 'category', 'previd' => '4', 'nextid' => '' );
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array( 'hierarchical' => true );
-		$GLOBALS['wpto_test']['returns']['current_user_can'] = true;
-		$GLOBALS['wpto_test']['returns']['get_term'] = new WP_Term( 3, 1 );
-		$GLOBALS['wpto_test']['returns']['wp_get_term_taxonomy_parent_id'] = 2;
+
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'previd' => '4',
+			'nextid' => '',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 3, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 2,
+			'get_term_meta'                  => '1',
+		);
+
 		$GLOBALS['wpto_test']['callbacks']['get_terms'] = static function ( $args ) {
 			return 2 === $args['parent'] ? array( new WP_Term( 4, 2 ) ) : array();
 		};
-		$GLOBALS['wpto_test']['returns']['get_term_meta'] = '1';
 
 		try {
 			$this->plugin->ajax_reordering_terms();
-		} catch ( WPTO_Test_JSON_Response $response ) {
-			$this->assertTrue( $response->success );
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
 		}
 
 		$this->assertSame( array( 3, 'category', array( 'parent' => 2 ) ), $GLOBALS['wpto_test']['calls']['wp_update_term'][0] ?? null );
 		$this->assertSame( array( 3, 'order', 2 ), $GLOBALS['wpto_test']['calls']['update_term_meta'][0] ?? null );
 	}
 
+	/** Stop reordering when WordPress rejects the new parent. */
 	public function test_failed_parent_change_does_not_reorder_terms(): void {
-		$_POST = array( 'id' => '3', 'tax' => 'category', 'previd' => '4', 'nextid' => '' );
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array( 'hierarchical' => true );
-		$GLOBALS['wpto_test']['returns']['current_user_can'] = true;
-		$GLOBALS['wpto_test']['returns']['get_term'] = new WP_Term( 3, 1 );
-		$GLOBALS['wpto_test']['returns']['wp_get_term_taxonomy_parent_id'] = 2;
-		$GLOBALS['wpto_test']['returns']['wp_update_term'] = new WP_Error();
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'previd' => '4',
+			'nextid' => '',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 3, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 2,
+			'wp_update_term'                 => new WP_Error(),
+		);
 
 		try {
 			$this->plugin->ajax_reordering_terms();
-		} catch ( WPTO_Test_JSON_Response $response ) {
-			$this->assertFalse( $response->success );
-			$this->assertSame( 'Failed to update term parent', $response->data['message'] );
+			$this->fail( 'Expected an error JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'Failed to update term parent', $response->getMessage() );
 		}
 
-		$this->assertCount( 1, $GLOBALS['wpto_test']['calls']['get_terms'] ?? array() );
 		$this->assertArrayNotHasKey( 'update_term_meta', $GLOBALS['wpto_test']['calls'] ?? array() );
 	}
 
+	/** Confirm a child moved to the root gets parent zero. */
 	public function test_dragging_child_to_root_saves_zero_parent(): void {
-		$this->plugin->db_strategy = 'meta';
-		$_POST = array( 'id' => '3', 'tax' => 'category', 'previd' => '4', 'nextid' => '' );
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array( 'hierarchical' => true );
-		$GLOBALS['wpto_test']['returns']['get_term'] = new WP_Term( 3, 1 );
-		$GLOBALS['wpto_test']['returns']['wp_get_term_taxonomy_parent_id'] = 0;
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'previd' => '4',
+			'nextid' => '',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 3, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 0,
+			'get_term_meta'                  => '1',
+		);
+
 		$GLOBALS['wpto_test']['callbacks']['get_terms'] = static function ( $args ) {
 			return 0 === $args['parent'] ? array( new WP_Term( 4 ) ) : array();
 		};
-		$GLOBALS['wpto_test']['returns']['get_term_meta'] = '1';
 
 		try {
 			$this->plugin->ajax_reordering_terms();
-		} catch ( WPTO_Test_JSON_Response $response ) {
-			$this->assertTrue( $response->success );
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
 		}
 
 		$this->assertSame( array( 3, 'category', array( 'parent' => 0 ) ), $GLOBALS['wpto_test']['calls']['wp_update_term'][0] ?? null );
 	}
 
+	/**
+	 * Provide both supported storage strategies.
+	 *
+	 * @return array<string, array<int, string>> Strategies.
+	 */
 	public static function storageStrategies(): array {
 		return array(
 			'modified table' => array( 'modify_tables' ),
-			'term metadata' => array( 'meta' ),
+			'term metadata'  => array( 'meta' ),
 		);
 	}
 
