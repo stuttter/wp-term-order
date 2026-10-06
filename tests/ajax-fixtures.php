@@ -17,6 +17,16 @@ function is_taxonomy_hierarchical( $taxonomy ) {
 }
 
 /**
+ * Return an unslashed AJAX value unchanged in the fixture.
+ *
+ * @param mixed $value Submitted value.
+ * @return mixed Unchanged value.
+ */
+function wp_unslash( $value ) {
+	return $value;
+}
+
+/**
  * Return the parent of an adjacent term in the AJAX fixture.
  *
  * @param mixed ...$arguments Adjacent term and taxonomy.
