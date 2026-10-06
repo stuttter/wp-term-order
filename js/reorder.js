@@ -193,15 +193,29 @@ function term_order_build_helper( row ) {
  * @returns {jQuery}
  */
 function term_order_build_preview( node ) {
-	var preview = jQuery( '<div class="term-order-drop-preview" />' ),
+	var source_table = sortable_terms_table.closest( 'table' ),
+		preview = jQuery( '<table />' )
+			.attr( 'class', source_table.attr( 'class' ) )
+			.addClass( 'term-order-drop-preview' )
+			.append( '<tbody />' ),
 		nodes = [ node ].concat( term_order_descendants( node ) );
 
 	jQuery.each( nodes, function( index, current ) {
-		jQuery( '<div class="term-order-preview-item" />' )
-			.toggleClass( 'term-order-preview-root', 0 === index )
-			.css( 'padding-left', 12 + ( ( current.level - node.level ) * 20 ) )
-			.text( term_order_node_label( current ) )
-			.appendTo( preview );
+		var preview_row = current.element.clone( false, false )
+			.removeAttr( 'id' )
+			.removeClass( 'ui-sortable-handle term-order-drag-group' )
+			.addClass( 'term-order-preview-row' )
+			.data( 'relative-depth', current.level - node.level )
+			.data( 'term-label', term_order_node_label( current ) );
+
+		preview_row.find( 'input' ).removeAttr( 'id name' ).prop( 'disabled', true );
+		preview_row.find( '.row-actions' ).remove();
+
+		preview_row.children().each( function( cell_index ) {
+			jQuery( this ).width( current.element.children().eq( cell_index ).outerWidth() );
+		} );
+
+		preview.find( 'tbody' ).append( preview_row );
 	} );
 
 	return preview;
@@ -363,9 +377,7 @@ function term_order_snap_depth( state, pageX ) {
 function term_order_show_slot( slot ) {
 	var label = wpTermOrder.topLevel,
 		top = slot.anchor.offset().top,
-		name_column = slot.anchor.find( '.column-name' ),
-		left,
-		width;
+		table = sortable_terms_table.closest( 'table' );
 
 	sortable_terms_table.children( 'tr' )
 		.removeClass( 'term-order-drop-before term-order-drop-after' );
@@ -384,17 +396,23 @@ function term_order_show_slot( slot ) {
 		top += slot.anchor.outerHeight();
 	}
 
-	left = ( name_column.length ? name_column.offset().left : slot.anchor.offset().left ) + 12 + ( slot.depth * 20 );
-	width = Math.max( 220, sortable_terms_table.offset().left + sortable_terms_table.outerWidth() - left - 12 );
-
 	drag_state.preview
-		.find( '.term-order-preview-target' ).text( label ).end()
 		.css( {
-			left:  left,
+			left:  table.offset().left,
 			top:   top + 2,
-			width: width
+			width: table.outerWidth()
 		} )
 		.show();
+
+	drag_state.preview.find( '.term-order-preview-row' ).each( function() {
+		var row = jQuery( this ),
+			depth = slot.depth + row.data( 'relative-depth' ),
+			prefix = new Array( depth + 1 ).join( '— ' ),
+			classes = ( row.attr( 'class' ) || '' ).replace( /(?:^|\s)level-\d+(?=\s|$)/g, '' );
+
+		row.attr( 'class', jQuery.trim( classes ) ).addClass( 'level-' + depth );
+		row.find( '.row-title' ).first().text( prefix + row.data( 'term-label' ) );
+	} );
 }
 
 /**
@@ -608,9 +626,6 @@ sortable_terms_table.sortable( {
 				.text( node.parent ? wpTermOrder.under + ' ' + node.parent.element.find( '.row-title' ).first().text() : wpTermOrder.topLevel )
 		);
 
-		drag_state.preview.find( '.term-order-preview-root' ).first().append(
-			jQuery( '<span class="term-order-preview-target" />' )
-		);
 	},
 
 	/**
@@ -772,8 +787,8 @@ function term_order_update_callback( response, post ) {
 			nonce:    wpTermOrder.nonce,
 			id:       changes.next['id'],
 			parent:   changes.next['parent'],
-			previd:   changes.next['previd'],
-			nextid:   changes.next['nextid'],
+			previd:   changes.next['previd'] || 0,
+			nextid:   changes.next['nextid'] || 0,
 			start:    changes.next['start'],
 			excluded: changes.next['excluded'],
 			tax:      taxonomy,
