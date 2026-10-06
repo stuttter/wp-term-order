@@ -11,16 +11,18 @@ require_once __DIR__ . '/ajax-fixtures.php';
  *
  * @param mixed $value Query value.
  */
-function wp_validate_boolean( $value ) {
-	if ( is_bool( $value ) ) {
-		return $value;
-	}
+if ( ! function_exists( 'wp_validate_boolean' ) ) {
+	function wp_validate_boolean( $value ) {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
 
-	if ( is_string( $value ) && ( 'false' === strtolower( $value ) ) ) {
-		return false;
-	}
+		if ( is_string( $value ) && ( 'false' === strtolower( $value ) ) ) {
+			return false;
+		}
 
-	return (bool) $value;
+		return (bool) $value;
+	}
 }
 
 final class TermOrderTest extends TestCase {
@@ -301,17 +303,31 @@ final class TermOrderTest extends TestCase {
 			)
 		);
 
-		$this->assertSame(
-			$expected,
-			$this->plugin->get_terms_orderby(
-				'anything',
-				array(
-					'taxonomy'               => array( 'category' ),
-					'orderby'                => 'order',
-					'wp_term_order_override' => false,
-				)
-			)
-		);
+		foreach ( array( false, 0, '0', 'false', 'FALSE' ) as $override ) {
+			$this->assertSame(
+				$expected,
+				$this->plugin->get_terms_orderby(
+					'anything',
+					array(
+						'taxonomy'               => array( 'category' ),
+						'orderby'                => 'order',
+						'wp_term_order_override' => $override,
+					)
+				),
+				'Failed to preserve explicit ordering for ' . var_export( $override, true ) . '.'
+			);
+		}
+
+		if ( 'meta' === $strategy ) {
+			$clauses = $this->plugin->terms_clauses(
+				array( 'join' => '', 'where' => '' ),
+				array( 'category' ),
+				array()
+			);
+
+			$this->assertStringContainsString( 'wp_termmeta', $clauses['join'] );
+			$this->assertStringContainsString( 'meta_key', $clauses['where'] );
+		}
 	}
 
 	/**
