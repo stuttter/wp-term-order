@@ -211,6 +211,113 @@ final class TermOrderTest extends TestCase {
 	}
 
 	/**
+	 * Keep a moved subtree together when its parent is submitted explicitly.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Order storage strategy.
+	 */
+	public function test_explicit_parent_reorders_subtree_without_reload( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '1',
+			'previd' => '4',
+			'nextid' => '',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 3, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 1,
+			'get_term_meta'                  => '1',
+		);
+
+		$GLOBALS['wpto_test']['callbacks']['get_terms'] = static function ( $args ) {
+			if ( 1 === $args['parent'] ) {
+				return array( new WP_Term( 4, 1 ) );
+			}
+
+			// The moved term has a child. Its row moves with the parent in the UI.
+			return 3 === $args['parent'] ? array( new WP_Term( 5, 3 ) ) : array();
+		};
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
+		}
+
+		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
+		$this->assertFalse( $payload->reload );
+		$this->assertArrayNotHasKey( 'wp_update_term', $GLOBALS['wpto_test']['calls'] ?? array() );
+		$this->assertCount( 1, $GLOBALS['wpto_test']['calls']['get_terms'] );
+	}
+
+	/**
+	 * Move a subtree into a parent that does not have any other children.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Order storage strategy.
+	 */
+	public function test_explicit_parent_change_supports_empty_sibling_group( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '6',
+			'previd' => '',
+			'nextid' => '',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'      => new WP_Term( 3, 1 ),
+			'get_term_meta' => '9',
+			'get_terms'     => array(),
+		);
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
+		}
+
+		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
+		$this->assertTrue( $payload->reload );
+		$this->assertSame( array( 3, 'category', array( 'parent' => 6 ) ), $GLOBALS['wpto_test']['calls']['wp_update_term'][0] ?? null );
+		$this->assertSame( 1, $payload->new_pos[3]['order'] ?? null );
+	}
+
+	/** Reject an adjacent row outside the explicitly submitted sibling group. */
+	public function test_explicit_parent_rejects_row_from_another_sibling_group(): void {
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '1',
+			'previd' => '4',
+			'nextid' => '',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 3, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 2,
+		);
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected an invalid position response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'Invalid position data', $response->getMessage() );
+		}
+
+		$this->assertArrayNotHasKey( 'get_terms', $GLOBALS['wpto_test']['calls'] ?? array() );
+		$this->assertArrayNotHasKey( 'wp_update_term', $GLOBALS['wpto_test']['calls'] ?? array() );
+	}
+
+	/**
 	 * Provide invalid hierarchy destinations.
 	 *
 	 * @return array<string, array{int, array<int>}>

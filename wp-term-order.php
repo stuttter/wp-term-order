@@ -310,7 +310,10 @@ final class WP_Term_Order {
 				'term-order-reorder',
 				'wpTermOrder',
 				array(
-					'nonce' => wp_create_nonce( 'wp_term_order_reordering_terms' ),
+					'nonce'    => wp_create_nonce( 'wp_term_order_reordering_terms' ),
+					'subtree'  => esc_html__( 'Descendants move with this term.', 'wp-term-order' ),
+					'topLevel' => esc_html__( 'Top level', 'wp-term-order' ),
+					'under'    => esc_html__( 'Under:', 'wp-term-order' ),
 				)
 			);
 		}
@@ -329,7 +332,7 @@ final class WP_Term_Order {
 			get_current_screen()->add_help_tab( array(
 				'id'      => 'wp_term_order_help_tab',
 				'title'   => esc_html__( 'Term Order', 'wp-term-order' ),
-				'content' => '<p>' . esc_html__( 'To reposition an item, drag and drop the row by "clicking and holding" it anywhere and moving it to its new position.', 'wp-term-order' ) . '</p>',
+				'content' => '<p>' . esc_html__( 'To reposition an item, drag and drop the row by "clicking and holding" it anywhere and moving it to its new position. Hierarchical terms move with their descendants. Move right to place them under a term, or move left to place them at a higher level.', 'wp-term-order' ) . '</p>',
 			) );
 
 		// Numbers only
@@ -386,6 +389,36 @@ final class WP_Term_Order {
 				background-color: #fff !important;
 				outline: 1px solid #bbb;
 				box-shadow: 0 3px 6px rgba(0, 0, 0, 0.175);
+			}
+
+			.wp-list-table .term-order-drop-blocked {
+				opacity: 0.45;
+			}
+
+			.wp-list-table .term-order-drop-target > th,
+			.wp-list-table .term-order-drop-target > td {
+				box-shadow: inset 3px 0 #2271b1;
+			}
+
+			.wp-list-table .term-order-subtree-count {
+				display: inline-block;
+				margin-left: 6px;
+				padding: 0 5px;
+				border-radius: 10px;
+				background: #2271b1;
+				color: #fff;
+				font-size: 11px;
+				font-weight: 600;
+				line-height: 18px;
+				vertical-align: 1px;
+			}
+
+			.wp-list-table .term-order-parent-target {
+				display: block;
+				margin-top: 4px;
+				color: #2271b1;
+				font-size: 12px;
+				font-weight: 400;
 			}
 
 			.wp-list-table.dragging .row-actions,
@@ -1102,15 +1135,31 @@ final class WP_Term_Order {
 				&&
 				! isset( $_POST['nextid'] )
 			)
+			||
+			( isset( $_POST['parent'] ) && ! is_numeric( $_POST['parent'] ) )
 		) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid request data', 'wp-term-order' ) ) );
 		}
 
-		// Bail if prev && next ID are not numeric
+		// Bail if adjacent IDs are malformed.
 		if (
-			! is_numeric( $_POST['previd'] )
-			&&
-			! is_numeric( $_POST['nextid'] )
+			(
+				! isset( $_POST['parent'] )
+				&&
+				! is_numeric( $_POST['previd'] )
+				&&
+				! is_numeric( $_POST['nextid'] )
+			)
+			||
+			(
+				isset( $_POST['parent'] )
+				&&
+				(
+					( ! empty( $_POST['previd'] ) && ! is_numeric( $_POST['previd'] ) )
+					||
+					( ! empty( $_POST['nextid'] ) && ! is_numeric( $_POST['nextid'] ) )
+				)
+			)
 		) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid position data', 'wp-term-order' ) ) );
 		}
@@ -1139,10 +1188,11 @@ final class WP_Term_Order {
 		}
 
 		// Sanitize positions
-		$previd   = empty( $_POST['previd']   ) ? false : (int) $_POST['previd'];
-		$nextid   = empty( $_POST['nextid']   ) ? false : (int) $_POST['nextid'];
-		$start    = empty( $_POST['start']    ) ? 1     : (int) $_POST['start'];
-		$excluded = empty( $_POST['excluded'] ) || ! wp_is_numeric_array( $_POST['excluded'] )
+		$previd     = empty( $_POST['previd']   ) ? false : (int) $_POST['previd'];
+		$nextid     = empty( $_POST['nextid']   ) ? false : (int) $_POST['nextid'];
+		$start      = empty( $_POST['start']    ) ? 1     : (int) $_POST['start'];
+		$has_parent = isset( $_POST['parent'] );
+		$excluded   = empty( $_POST['excluded'] ) || ! wp_is_numeric_array( $_POST['excluded'] )
 			? array( $term->term_id )
 			: wp_parse_id_list( $_POST['excluded'] );
 
@@ -1151,14 +1201,32 @@ final class WP_Term_Order {
 		$new_pos = array();
 		$reload  = isset( $_POST['reload'] ) && 1 === absint( wp_unslash( $_POST['reload'] ) ); // phpcs:ignore Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 
-		// attempt to get the intended parent...
+		// Attempt to get the intended parent.
 		$parent_id        = $term->parent;
 		$next_term_parent = $nextid
 			? wp_get_term_taxonomy_parent_id( $nextid, $taxonomy )
 			: false;
 
-		// If the preceding term is the parent of the next term, move it inside
-		if ( $previd === $next_term_parent ) {
+		// A hierarchy-aware client submits the exact sibling group.
+		if ( $has_parent ) {
+			$parent_id = is_taxonomy_hierarchical( $taxonomy )
+				? max( 0, (int) $_POST['parent'] )
+				: 0;
+
+			$prev_term_parent = $previd
+				? wp_get_term_taxonomy_parent_id( $previd, $taxonomy )
+				: false;
+
+			if (
+				( $previd && (int) $prev_term_parent !== $parent_id )
+				||
+				( $nextid && (int) $next_term_parent !== $parent_id )
+			) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Invalid position data', 'wp-term-order' ) ) );
+			}
+
+		// If the preceding term is the parent of the next term, move it inside.
+		} elseif ( $previd === $next_term_parent ) {
 			$parent_id = $next_term_parent;
 
 		// If the next term's parent isn't the same as our parent, we need more info
@@ -1224,6 +1292,21 @@ final class WP_Term_Order {
 			}
 		}
 		// phpcs:enable Generic.WhiteSpace.ScopeIndent
+
+		// An empty sibling group still needs an explicit first position.
+		if ( empty( $siblings ) ) {
+			$this->set_term_order( $term->term_id, $taxonomy, $start, true );
+
+			$term_ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+
+			$new_pos[ $term->term_id ] = array(
+				'order'  => $start,
+				'parent' => $parent_id,
+				'depth'  => count( $term_ancestors ),
+			);
+
+			$start++;
+		}
 
 		// Loop through siblings and update terms
 		foreach ( $siblings as $sibling ) {
@@ -1298,29 +1381,11 @@ final class WP_Term_Order {
 				'start'    => $start,
 				'excluded' => array_unique( array_merge( array_keys( $new_pos ), $excluded ) ),
 				'taxonomy' => $taxonomy,
+				'parent'   => $parent_id,
 				'reload'   => $reload ? 1 : 0,
 			);
 		} else {
 			$retval->next = false;
-		}
-
-		if ( empty( $retval->next ) ) {
-
-			// If the moved term has children, refresh the page for UI reasons
-			$children = get_terms( array(
-				'taxonomy'   => $taxonomy,
-				'number'     => 1,
-				'depth'      => 1,
-				'orderby'    => 'order',
-				'order'      => 'ASC',
-				'parent'     => $term->term_id,
-				'fields'     => 'ids',
-				'hide_empty' => false
-			) );
-
-			if ( ! empty( $children ) && ! is_wp_error( $children ) ) {
-				wp_send_json_error( array( 'message' => 'children' ) );
-			}
 		}
 
 		// Add to return value
