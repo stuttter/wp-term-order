@@ -291,43 +291,49 @@ final class TermOrderTest extends TestCase {
 		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_taxonomy_override_orderby_supported'] = static function () {
 			return false;
 		};
+		$query_args = array(
+			'taxonomy' => array( 'category' ),
+			'orderby'  => 'order',
+		);
 
 		$this->assertSame(
 			$expected,
-			$this->plugin->get_terms_orderby(
-				'anything',
-				array(
-					'taxonomy' => array( 'category' ),
-					'orderby'  => 'order',
-				)
-			)
+			$this->plugin->get_terms_orderby( 'anything', $query_args )
 		);
 
+		if ( 'meta' === $strategy ) {
+			$this->assert_meta_order_clauses( $query_args );
+		}
+
 		foreach ( array( false, 0, '0', 'false', 'FALSE' ) as $override ) {
+			$query_args['wp_term_order_override'] = $override;
+
 			$this->assertSame(
 				$expected,
-				$this->plugin->get_terms_orderby(
-					'anything',
-					array(
-						'taxonomy'               => array( 'category' ),
-						'orderby'                => 'order',
-						'wp_term_order_override' => $override,
-					)
-				),
+				$this->plugin->get_terms_orderby( 'anything', $query_args ),
 				'Failed to preserve explicit ordering for ' . var_export( $override, true ) . '.'
 			);
-		}
 
-		if ( 'meta' === $strategy ) {
-			$clauses = $this->plugin->terms_clauses(
-				array( 'join' => '', 'where' => '' ),
-				array( 'category' ),
-				array()
-			);
-
-			$this->assertStringContainsString( 'wp_termmeta', $clauses['join'] );
-			$this->assertStringContainsString( 'meta_key', $clauses['where'] );
+			if ( 'meta' === $strategy ) {
+				$this->assert_meta_order_clauses( $query_args );
+			}
 		}
+	}
+
+	/**
+	 * Assert that the metadata strategy supplies the alias used for ordering.
+	 *
+	 * @param array<string, mixed> $args Query arguments.
+	 */
+	private function assert_meta_order_clauses( array $args ): void {
+		$clauses = $this->plugin->terms_clauses(
+			array( 'join' => '', 'where' => '' ),
+			array( 'category' ),
+			$args
+		);
+
+		$this->assertStringContainsString( 'AS order_clause', $clauses['join'] );
+		$this->assertStringContainsString( 'order_clause.meta_key', $clauses['where'] );
 	}
 
 	/**
