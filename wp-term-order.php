@@ -89,6 +89,13 @@ final class WP_Term_Order {
 	public $term_clauses = array();
 
 	/**
+	 * Term clauses awaiting their matching clauses filter.
+	 *
+	 * @var array<int, array<string, string>|false>
+	 */
+	public $term_clause_stack = array();
+
+	/**
 	 * @var array<string, array<string, mixed>> Meta query clauses
 	 */
 	public $meta_clauses = array();
@@ -848,21 +855,27 @@ final class WP_Term_Order {
 	 */
 	public function terms_clauses( $clauses = array(), $taxonomies = array(), $args = array() ) {
 
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+
+		// Consume this query's entry while preserving any outer query.
+		$term_clauses = array_pop( $this->term_clause_stack );
+
 		// Bail if not supported taxonomies
 		if ( ! $this->taxonomy_supported( $taxonomies ) ) {
 			return $clauses;
 		}
 
-		// Bail if no clauses
-		if ( empty( $this->term_clauses ) ) {
+		// Bail if no clauses for this query
+		if ( empty( $term_clauses ) ) {
 			return $clauses;
 		}
 
 		// Explicitly meta
 		if ( 'meta' === $this->db_strategy ) {
-			$clauses['where'] .= $this->term_clauses['where'];
-			$clauses['join']  .= $this->term_clauses['join'];
+			$clauses['where'] .= $term_clauses['where'];
+			$clauses['join']  .= $term_clauses['join'];
 		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Return clauses
 		return $clauses;
@@ -878,12 +891,17 @@ final class WP_Term_Order {
 	 */
 	public function get_terms_orderby( $orderby = 't.name', $args = array() ) {
 
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+
+		// Reserve a stack entry for this query before any early return.
+		$this->term_clause_stack[] = false;
+		$term_clause_index         = count( $this->term_clause_stack ) - 1;
+
 		// Bail if taxonomy not supported
 		if ( ! $this->taxonomy_supported( $args['taxonomy'] ) ) {
 			return $orderby;
 		}
 
-		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 		// An explicit request for term order is not an implicit override.
 		$explicit_order = isset( $args['orderby'] ) && ( 'order' === $args['orderby'] );
 
@@ -970,6 +988,12 @@ final class WP_Term_Order {
 				$this->meta_query->parse_query_vars( $r );
 				$this->term_clauses = $this->meta_query->get_sql( 'term', 't', 'term_id' );
 				$this->meta_clauses = $this->meta_query->get_clauses();
+
+				// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+				if ( false !== $this->term_clauses ) {
+					$this->term_clause_stack[ $term_clause_index ] = $this->term_clauses;
+				}
+				// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 				// Get the orderby string
 				$orderby = $this->parse_orderby_meta( $orderby );
