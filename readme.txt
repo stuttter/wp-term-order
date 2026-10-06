@@ -50,6 +50,10 @@ No. There are no new database tables with this plugin.
 
 Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
 
+= Can I use values such as 2.567 to describe a term's place in a hierarchy? =
+
+No. Order values are whole numbers. A term's parent is stored separately by WordPress, so use the Parent field to set its hierarchy and the Order field to position it among terms at that level.
+
 = Where can I get support? =
 
 The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/
