@@ -259,6 +259,48 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * An explicit request for term order is not an implicit override.
+	 *
+	 * @dataProvider explicitOrderStrategies
+	 * @param string $strategy Database storage strategy.
+	 * @param string $expected Expected orderby clause.
+	 */
+	public function test_explicit_order_is_not_disabled_with_implicit_override( string $strategy, string $expected ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_taxonomy_override_orderby_supported'] = static function () {
+			return false;
+		};
+
+		$this->assertSame(
+			$expected,
+			$this->plugin->get_terms_orderby( 'anything', array( 'taxonomy' => array( 'category' ), 'orderby' => 'order' ) )
+		);
+	}
+
+	/**
+	 * A single query can preserve its requested ordering.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Database storage strategy.
+	 */
+	public function test_query_can_disable_implicit_orderby_override( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$this->assertSame(
+			't.name',
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'              => array( 'category' ),
+					'orderby'               => 'name',
+					'wp_term_order_override' => false,
+				)
+			)
+		);
+	}
+
 	public function test_default_name_order_uses_column_order_with_name_tiebreaker(): void {
 		$this->assertSame(
 			'tt.order, t.name',
@@ -270,6 +312,13 @@ final class TermOrderTest extends TestCase {
 		$this->assertSame(
 			'tt.order',
 			$this->plugin->get_terms_orderby( 'anything', array( 'taxonomy' => array( 'category' ), 'orderby' => 'order' ) )
+		);
+	}
+
+	public static function explicitOrderStrategies(): array {
+		return array(
+			'modified table' => array( 'modify_tables', 'tt.order' ),
+			'term metadata'  => array( 'meta', 'CAST(order_clause.meta_value AS SIGNED)' ),
 		);
 	}
 

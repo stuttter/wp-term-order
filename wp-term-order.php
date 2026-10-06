@@ -840,9 +840,20 @@ final class WP_Term_Order {
 			return $orderby;
 		}
 
-		// Bail if taxonomy orderby override not supported
-		if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
-			return $orderby;
+		// An explicit request for term order is not an implicit override
+		$explicit_order = isset( $args['orderby'] ) && ( 'order' === $args['orderby'] );
+
+		if ( ! $explicit_order ) {
+
+			// Allow a single query to preserve its requested ordering
+			if ( isset( $args['wp_term_order_override'] ) && ( false === $args['wp_term_order_override'] ) ) {
+				return $orderby;
+			}
+
+			// Bail if taxonomy orderby override not supported
+			if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
+				return $orderby;
+			}
 		}
 
 		// Default to not overriding
@@ -866,7 +877,7 @@ final class WP_Term_Order {
 		if ( 'modify_tables' === $this->db_strategy ) {
 
 			// Explicitly asking for "order" column
-			if ( 'order' === $args['orderby'] ) {
+			if ( $explicit_order ) {
 				$orderby = 'tt.order';
 
 			// Falling back to "t.name" so we'll guess at an override
@@ -881,7 +892,7 @@ final class WP_Term_Order {
 		// Explicitly meta
 		} elseif ( 'meta' === $this->db_strategy ) {
 			if (
-				( 'order' === $args['orderby'] )
+				$explicit_order
 				||
 				( 't.name' === $orderby )
 				||
