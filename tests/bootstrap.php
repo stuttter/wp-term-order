@@ -31,6 +31,23 @@ function get_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $
 function update_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function clean_term_cache( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function do_action( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
+function wp_get_term_taxonomy_parent_id( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
+function wp_is_numeric_array( $value ) { return is_array( $value ) && array_values( $value ) === $value; }
+function wp_parse_id_list( $value ) { return array_map( 'intval', $value ); }
+function get_ancestors( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ) ?? array(); }
+function wp_update_term( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
+function wp_send_json_success( $value ) { throw new WPTO_Test_JSON_Response( true, $value ); }
+
+class WPTO_Test_JSON_Response extends RuntimeException {
+	public $success;
+	public $data;
+
+	public function __construct( $success, $data ) {
+		parent::__construct( is_array( $data ) ? ( $data['message'] ?? '' ) : '' );
+		$this->success = $success;
+		$this->data = $data;
+	}
+}
 
 /**
  * Record the AJAX nonce check.
@@ -56,12 +73,12 @@ function absint( $value ) {
  * @param string $taxonomy Taxonomy name.
  */
 function get_taxonomy( $taxonomy ) {
-	return (object) array( 'name' => $taxonomy );
+	return $GLOBALS['wpto_test']['returns']['get_taxonomy'] ?? (object) array( 'name' => $taxonomy );
 }
 
 /** Permit editing in the AJAX fixture. */
-function current_user_can() {
-	return true;
+function current_user_can( ...$arguments ) {
+	return $GLOBALS['wpto_test']['returns']['current_user_can'] ?? true;
 }
 
 /**
@@ -80,7 +97,7 @@ function esc_html__( $text ) {
  * @throws RuntimeException Always captures the response.
  */
 function wp_send_json_error( $data ) {
-	throw new RuntimeException( $data['message'] ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test response is intentionally raw.
+	throw new WPTO_Test_JSON_Response( false, $data );
 }
 
 /**
