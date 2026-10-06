@@ -57,6 +57,10 @@ $terms = get_terms( array(
 ) );
 ```
 
+The `wp_term_order_taxonomy_override_orderby_supported` filter controls only
+the implicit override of WordPress's default term-name ordering. It does not
+disable an explicit `orderby` value of `order`.
+
 ### Where can I get support?
 
 The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/

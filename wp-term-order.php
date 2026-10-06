@@ -252,7 +252,8 @@ final class WP_Term_Order {
 	/**
 	 * Check if a taxonomy supports overriding the orderby of a WP_Term_Query.
 	 *
-	 * Allows filtering of overriding the orderby specifically.
+	 * Allows filtering of the implicit default-name orderby override specifically.
+	 * An explicit `orderby` value of `order` is handled independently.
 	 *
 	 * @since 2.0.0
 	 * @param array<int, string> $taxonomy

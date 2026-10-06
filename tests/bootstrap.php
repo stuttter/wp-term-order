@@ -25,19 +25,6 @@ function apply_filters( $hook, $value, ...$arguments ) {
 }
 function sanitize_key( $value ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/', '', (string) $value ) ); }
 
-/**
- * Normalize a boolean query value like WordPress.
- *
- * @param mixed $value Query value.
- */
-function wp_validate_boolean( $value ) {
-	if ( false === $value || 'false' === $value ) {
-		return false;
-	}
-
-	return (bool) $value;
-}
-
 function is_admin() { return (bool) ( wpto_test_call( __FUNCTION__, array() ) ?? false ); }
 function is_wp_error( $value ) { return $value instanceof WP_Error; }
 function get_term( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }

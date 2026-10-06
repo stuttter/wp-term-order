@@ -6,6 +6,23 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/ajax-fixtures.php';
 
+/**
+ * Normalize a boolean query value like WordPress.
+ *
+ * @param mixed $value Query value.
+ */
+function wp_validate_boolean( $value ) {
+	if ( is_bool( $value ) ) {
+		return $value;
+	}
+
+	if ( is_string( $value ) && ( 'false' === strtolower( $value ) ) ) {
+		return false;
+	}
+
+	return (bool) $value;
+}
+
 final class TermOrderTest extends TestCase {
 	private $plugin;
 
@@ -283,6 +300,39 @@ final class TermOrderTest extends TestCase {
 				)
 			)
 		);
+
+		$this->assertSame(
+			$expected,
+			$this->plugin->get_terms_orderby(
+				'anything',
+				array(
+					'taxonomy'               => array( 'category' ),
+					'orderby'                => 'order',
+					'wp_term_order_override' => false,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Explicit ordering does not make an unsupported taxonomy eligible.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Database storage strategy.
+	 */
+	public function test_explicit_order_preserves_unsupported_taxonomy_orderby( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$this->assertSame(
+			'original order',
+			$this->plugin->get_terms_orderby(
+				'original order',
+				array(
+					'taxonomy' => array( 'private_taxonomy' ),
+					'orderby'  => 'order',
+				)
+			)
+		);
 	}
 
 	/**
@@ -294,7 +344,7 @@ final class TermOrderTest extends TestCase {
 	public function test_query_can_disable_implicit_orderby_override( string $strategy ): void {
 		$this->plugin->db_strategy = $strategy;
 
-		foreach ( array( false, 0, '0', 'false' ) as $override ) {
+		foreach ( array( false, 0, '0', 'false', 'False', 'FALSE', '' ) as $override ) {
 			$this->assertSame(
 				't.name',
 				$this->plugin->get_terms_orderby(
@@ -304,7 +354,34 @@ final class TermOrderTest extends TestCase {
 						'orderby'                => 'name',
 						'wp_term_order_override' => $override,
 					)
-				)
+				),
+				'Failed to disable the override for ' . var_export( $override, true ) . '.'
+			);
+		}
+	}
+
+	/**
+	 * True-like query values preserve the implicit ordering override.
+	 *
+	 * @dataProvider implicitOrderStrategies
+	 * @param string $strategy Database storage strategy.
+	 * @param string $expected Expected orderby clause.
+	 */
+	public function test_true_query_values_preserve_implicit_orderby_override( string $strategy, string $expected ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		foreach ( array( true, 1, '1', 'true' ) as $override ) {
+			$this->assertSame(
+				$expected,
+				$this->plugin->get_terms_orderby(
+					't.name',
+					array(
+						'taxonomy'               => array( 'category' ),
+						'orderby'                => 'name',
+						'wp_term_order_override' => $override,
+					)
+				),
+				'Failed to preserve the override for ' . var_export( $override, true ) . '.'
 			);
 		}
 	}
@@ -331,6 +408,18 @@ final class TermOrderTest extends TestCase {
 	public static function explicitOrderStrategies(): array {
 		return array(
 			'modified table' => array( 'modify_tables', 'tt.order' ),
+			'term metadata'  => array( 'meta', 'CAST(order_clause.meta_value AS SIGNED)' ),
+		);
+	}
+
+	/**
+	 * Database strategies and their implicit orderby clauses.
+	 *
+	 * @return array<string, array<int, string>>
+	 */
+	public static function implicitOrderStrategies(): array {
+		return array(
+			'modified table' => array( 'modify_tables', 'tt.order, t.name' ),
 			'term metadata'  => array( 'meta', 'CAST(order_clause.meta_value AS SIGNED)' ),
 		);
 	}
