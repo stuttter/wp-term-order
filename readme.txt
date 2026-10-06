@@ -3,10 +3,12 @@ Contributors:      johnjamesjacoby, stuttter
 Tags:              taxonomy, term, order
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
-Donate link:       https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9Q4F4EL5YJ62J
-Requires at least: 4.3
-Tested up to:      5.5
-Stable tag:        2.0.0
+Requires at least: 6.4
+Requires PHP:      7.4
+Tested up to:      7.1
+Stable tag:        2.2.0
+
+Sort taxonomy terms your way.
 
 == Description ==
 
@@ -48,6 +50,14 @@ No. There are no new database tables with this plugin.
 
 Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
 
+= Can I use values such as 2.567 to describe a term's place in a hierarchy? =
+
+No. Order values are whole numbers. A term's parent is stored separately by WordPress, so use the Parent field to set its hierarchy and the Order field to position it among terms at that level.
+
+= Can I preserve a query's requested term ordering? =
+
+Yes. Pass `wp_term_order_override` as `false` to preserve another `orderby` value for that query. For a supported taxonomy, an explicit `orderby` value of `order` is always honored. The `wp_term_order_taxonomy_override_orderby_supported` filter controls only the implicit override of WordPress's default term-name ordering.
+
 = Where can I get support? =
 
 The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/
@@ -57,6 +67,12 @@ The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order
 http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
+
+= 2.2.0 =
+* Fix CSRF. Thank you Nabil Irawan.
+
+= 2.1.0 =
+* PHP8 support
 
 = 2.0.0 =
 * Migrate existing order data to term meta on upgrade

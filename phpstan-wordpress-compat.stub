@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * WordPress retains integer asset versions and stringifies them in URLs.
+ *
+ * @param string                    $handle
+ * @param string                    $src
+ * @param array<int, string>        $deps
+ * @param string|int|bool|null      $ver
+ * @param array<string, mixed>|bool $args
+ * @return bool
+ */
+function wp_register_script( $handle, $src, $deps = array(), $ver = false, $args = array() ) {}

@@ -7,10 +7,12 @@
  * Author:            John James Jacoby
  * Author URI:        https://jjj.blog
  * Text Domain:       wp-term-order
- * License:           GPL v2 or later
- * Requires PHP:      5.6.20
- * Requires at least: 5.3
- * Version:           2.0.0
+ * License:           GPLv2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Requires at least: 6.4
+ * Requires PHP:      7.4
+ * Tested up to:      7.1
+ * Version:           2.2.0
  */
 
 // Exit if accessed directly
@@ -29,12 +31,12 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '2.0.0';
+	public $version = '2.2.0';
 
 	/**
-	 * @var string Database version
+	 * @var int Database version
 	 */
-	public $db_version = 202106140001;
+	public $db_version = 202602070003;
 
 	/**
 	 * @var string Database version
@@ -67,7 +69,7 @@ final class WP_Term_Order {
 	public $basename = '';
 
 	/**
-	 * @var array Which taxonomies are being targeted?
+	 * @var array<string> Which taxonomies are being targeted?
 	 */
 	public $taxonomies = array();
 
@@ -75,6 +77,21 @@ final class WP_Term_Order {
 	 * @var bool Whether to use fancy ordering
 	 */
 	public $fancy = true;
+
+	/**
+	 * @var WP_Meta_Query|false Meta query arguments
+	 */
+	public $meta_query = false;
+
+	/**
+	 * @var array<string, string>|false Term query clauses
+	 */
+	public $term_clauses = array();
+
+	/**
+	 * @var array<string, array<string, mixed>> Meta query clauses
+	 */
+	public $meta_clauses = array();
 
 	/**
 	 * Empty constructor
@@ -89,6 +106,7 @@ final class WP_Term_Order {
 	 * Hook into queries, admin screens, and more!
 	 *
 	 * @since 1.0.0
+	 * @return void
 	 */
 	public function init() {
 
@@ -102,7 +120,7 @@ final class WP_Term_Order {
 		 * Allow overriding the UI approach
 		 *
 		 * @since 1.0.0
-		 * @param bool True to use jQuery sortable. False for numbers only.
+		 * @param bool $fancy True to use jQuery sortable. False for numbers only.
 		 */
 		$this->fancy = apply_filters( 'wp_fancy_term_order', true );
 
@@ -113,7 +131,7 @@ final class WP_Term_Order {
 		 * the term_taxonomy database table.
 		 *
 		 * @since 2.0.0
-		 * @param string "modify_tables" by default. Return "meta" to not modify tables.
+		 * @param string $strategy "modify_tables" by default. Return "meta" to not modify tables.
 		 */
 		$this->db_strategy = apply_filters( 'wp_term_order_db_strategy', $this->db_strategy );
 
@@ -139,11 +157,11 @@ final class WP_Term_Order {
 
 			// Register "order" meta value
 			register_term_meta( $value, 'order', array(
-				'type'              => 'integer',
-				'description'       => esc_html__( 'Numeric order for terms, useful when sorting', 'wp-term-order' ),
-				'default'           => 0,
-				'single'            => true,
-				'show_in_rest'      => true,
+				'type'         => 'integer',
+				'description'  => esc_html__( 'Numeric order for terms, useful when sorting', 'wp-term-order' ),
+				'default'      => 0,
+				'single'       => true,
+				'show_in_rest' => true,
 			) );
 		}
 
@@ -156,10 +174,10 @@ final class WP_Term_Order {
 		add_action( 'wp_ajax_reordering_terms', array( $this, 'ajax_reordering_terms' ) );
 
 		// Only blog admin screens
-		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+		if ( is_blog_admin() || doing_action( 'wp_ajax_inline_save_tax' ) || defined( 'WP_CLI' ) ) {
 			add_action( 'admin_init', array( $this, 'admin_init' ) );
 
-			// Bail if taxonomy does not include colors
+			// Proceed only if taxonomy supported
 			if ( ! empty( $_REQUEST['taxonomy'] ) && $this->taxonomy_supported( $_REQUEST['taxonomy'] ) && ! defined( 'WP_CLI' ) ) {
 				add_action( 'load-edit-tags.php', array( $this, 'edit_tags' ) );
 			}
@@ -170,25 +188,31 @@ final class WP_Term_Order {
 	}
 
 	/**
-	 * Administration area hooks
+	 * Administration area hooks.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function admin_init() {
 
 		// Check for DB update
 		$this->maybe_upgrade_database();
+
+		// Register scripts
+		$this->register_scripts();
 	}
 
 	/**
-	 * Administration area hooks
+	 * Administration area hooks.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function edit_tags() {
 		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'enqueue_scripts' ) );
-		add_action( 'admin_head-edit-tags.php',          array( $this, 'admin_head'      ) );
-		add_action( 'admin_head-edit-tags.php',          array( $this, 'help_tabs'       ) );
+		add_action( 'admin_print_scripts-edit-tags.php', array( $this, 'localize_scripts' ) );
+		add_action( 'admin_head-edit-tags.php',          array( $this, 'admin_head' ) );
+		add_action( 'admin_head-edit-tags.php',          array( $this, 'help_tabs' ) );
 		add_action( 'quick_edit_custom_box',             array( $this, 'quick_edit_term_order' ), 10, 3 );
 	}
 
@@ -198,12 +222,12 @@ final class WP_Term_Order {
 	 * Check if a taxonomy supports ordering its terms.
 	 *
 	 * @since 1.0.0
-	 * @param array $taxonomy
+	 * @param mixed $taxonomy
 	 * @return bool Default true
 	 */
 	public function taxonomy_supported( $taxonomy = array() ) {
 
-		// Defaut return value
+		// Default return value
 		$retval = true;
 
 		if ( is_string( $taxonomy ) ) {
@@ -228,15 +252,16 @@ final class WP_Term_Order {
 	/**
 	 * Check if a taxonomy supports overriding the orderby of a WP_Term_Query.
 	 *
-	 * Allows filtering of overriding the orderby specifically.
+	 * Allows filtering of the implicit default-name orderby override specifically.
+	 * An explicit `orderby` value of `order` is handled independently.
 	 *
 	 * @since 2.0.0
-	 * @param array $taxonomy
+	 * @param array<int, string> $taxonomy
 	 * @return bool Default true
 	 */
 	public function taxonomy_override_orderby_supported( $taxonomy = array() ) {
 
-		// Defaut return value
+		// Default return value
 		$retval = $this->taxonomy_supported( $taxonomy );
 
 		// Filter & return
@@ -244,23 +269,58 @@ final class WP_Term_Order {
 	}
 
 	/**
-	 * Enqueue quick-edit JS
+	 * Register scripts.
+	 *
+	 * @since 2.2.0
+	 * @return void
+	 */
+	public function register_scripts() {
+		wp_register_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ),             $this->db_version, true );
+		wp_register_script( 'term-order-reorder',    $this->url . 'js/reorder.js',    array( 'jquery-ui-sortable' ), $this->db_version, true );
+	}
+
+	/**
+	 * Enqueue scripts.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function enqueue_scripts() {
-		wp_enqueue_script( 'term-order-quick-edit', $this->url . 'js/quick-edit.js', array( 'jquery' ), $this->db_version, true );
+
+		// Always enqueue quick-edit
+		wp_enqueue_script( 'term-order-quick-edit' );
 
 		// Enqueue fancy ordering
 		if ( true === $this->fancy ) {
-			wp_enqueue_script( 'term-order-reorder', $this->url . 'js/reorder.js', array( 'jquery-ui-sortable' ), $this->db_version, true );
+			wp_enqueue_script( 'term-order-reorder' );
 		}
 	}
 
 	/**
-	 * Contextual help tabs
+	 * Localize scripts.
+	 *
+	 * @since 2.2.0
+	 * @return void
+	 */
+	public function localize_scripts() {
+
+		// Only if fancy
+		if ( true === $this->fancy ) {
+			wp_localize_script(
+				'term-order-reorder',
+				'wpTermOrder',
+				array(
+					'nonce' => wp_create_nonce( 'wp_term_order_reordering_terms' ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Contextual help tabs.
 	 *
 	 * @since 0.1.5
+	 * @return void
 	 */
 	public function help_tabs() {
 
@@ -286,6 +346,7 @@ final class WP_Term_Order {
 	 * Align custom `order` column, and fancy sortable styling.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function admin_head() {
 		?>
@@ -361,8 +422,8 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param array $args
-	 * @return array
+	 * @param array<string, mixed> $args
+	 * @return array<int, string>
 	 */
 	private function get_taxonomies( $args = array() ) {
 
@@ -385,8 +446,8 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param array $columns
-	 * @return array
+	 * @param array<string, string> $columns
+	 * @return array<string, string>
 	 */
 	public function add_column_header( $columns = array() ) {
 		$columns['order'] = esc_html__( 'Order', 'wp-term-order' );
@@ -406,8 +467,13 @@ final class WP_Term_Order {
 	 */
 	public function add_column_value( $empty = '', $custom_column = '', $term_id = 0 ) {
 
+		// Get taxonomy and sanitize it
+		$taxonomy = ! empty( $_REQUEST['taxonomy'] )
+			? sanitize_key( $_REQUEST['taxonomy'] )
+			: '';
+
 		// Bail if no taxonomy passed or not on the `order` column
-		if ( empty( $_REQUEST['taxonomy'] ) || ( 'order' !== $custom_column ) || ! empty( $empty ) ) {
+		if ( empty( $taxonomy ) || ( 'order' !== $custom_column ) || ! empty( $empty ) ) {
 			return;
 		}
 
@@ -418,8 +484,8 @@ final class WP_Term_Order {
 	 * Allow sorting by `order` order
 	 *
 	 * @since 0.1.0
-	 * @param array $columns
-	 * @return array
+	 * @param array<string, string> $columns
+	 * @return array<string, string>
 	 */
 	public function sortable_columns( $columns = array() ) {
 		$columns['order'] = 'order';
@@ -431,14 +497,14 @@ final class WP_Term_Order {
 	 * Add `order` to hidden columns
 	 *
 	 * @since 2.0.0
-	 * @param array     $columns
-	 * @param WP_Screen $screen
-	 * @return array
+	 * @param array<int, string> $columns
+	 * @param WP_Screen|string   $screen
+	 * @return array<int, string>
 	 */
 	public function hidden_columns( $columns = array(), $screen = '' ) {
 
 		// Bail if not on the `edit-tags` screen for a visible taxonomy
-		if ( ( 'edit-tags' !== $screen->base ) || ! $this->taxonomy_supported( $screen->taxonomy ) ) {
+		if ( ! $screen instanceof WP_Screen || ( 'edit-tags' !== $screen->base ) || ! $this->taxonomy_supported( $screen->taxonomy ) ) {
 			return $columns;
 		}
 
@@ -454,6 +520,7 @@ final class WP_Term_Order {
 	 * @param  int     $term_id   The ID of the term
 	 * @param  int     $tt_id     Not used
 	 * @param  string  $taxonomy  Taxonomy of the term
+	 * @return void
 	 */
 	public function add_term_order( $term_id = 0, $tt_id = 0, $taxonomy = '' ) {
 
@@ -462,6 +529,11 @@ final class WP_Term_Order {
 		 * form is used to update a term.
 		 */
 		if ( ! isset( $_POST['order'] ) ) {
+			return;
+		}
+
+		// Bail if user cannot edit this term
+		if ( ! current_user_can( 'edit_term', $term_id ) ) {
 			return;
 		}
 
@@ -479,10 +551,11 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 * @global object  $wpdb
-	 * @param  int     $term_id
-	 * @param  string  $taxonomy
-	 * @param  int     $order
-	 * @param  bool    $clean_cache
+	 * @param  int        $term_id
+	 * @param  string     $taxonomy
+	 * @param  int|string $order
+	 * @param  bool       $clean_cache
+	 * @return void
 	 */
 	public function set_term_order( $term_id = 0, $taxonomy = '', $order = 0, $clean_cache = false ) {
 		global $wpdb;
@@ -556,10 +629,11 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 * @param int $term_id
+	 * @return int
 	 */
 	public function get_term_order( $term_id = 0 ) {
 
-		// Use false
+		// Start with no value
 		$retval = false;
 
 		// Use term order if set and strategy allows
@@ -573,7 +647,7 @@ final class WP_Term_Order {
 			// Get the term, probably from cache at this point
 			$term = get_term( $term_id, $tax );
 
-			if ( isset( $term->order ) ) {
+			if ( $term instanceof WP_Term && isset( $term->order ) ) {
 				$retval = $term->order;
 			}
 		}
@@ -593,6 +667,7 @@ final class WP_Term_Order {
 	 * Output the "order" form field when adding a new term
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function term_order_add_form_field() {
 
@@ -630,9 +705,13 @@ final class WP_Term_Order {
 	 * Output the "order" form field when editing an existing term
 	 *
 	 * @since 0.1.0
-	 * @param object $term
+	 * @param WP_Term|false $term
+	 * @return void
 	 */
 	public function term_order_edit_form_field( $term = false ) {
+			if ( ! $term instanceof WP_Term ) {
+				return;
+			}
 
 		// Default classes
 		$classes = array(
@@ -657,7 +736,7 @@ final class WP_Term_Order {
 				</label>
 			</th>
 			<td>
-				<input name="order" id="order" type="text" value="<?php echo $this->get_term_order( $term ); ?>" size="11" />
+				<input name="order" id="order" type="text" value="<?php echo esc_attr( (string) $this->get_term_order( $term->term_id ) ); ?>" size="11" />
 				<p class="description">
 					<?php esc_html_e( 'Terms are usually ordered alphabetically, but you can choose your own order by entering a number (1 for first, etc.) in this field.', 'wp-term-order' ); ?>
 				</p>
@@ -674,6 +753,7 @@ final class WP_Term_Order {
 	 * @param string $column_name
 	 * @param string $screen
 	 * @param string $name
+	 * @return false|void
 	 */
 	public function quick_edit_term_order( $column_name = '', $screen = '', $name = '' ) {
 
@@ -718,10 +798,10 @@ final class WP_Term_Order {
 	 * Maybe filter the terms query clauses.
 	 *
 	 * @since 2.0.0
-	 * @param array $clauses
-	 * @param array $taxonomies
-	 * @param array $args
-	 * @return array
+	 * @param array<string, string> $clauses
+	 * @param array<int, string> $taxonomies
+	 * @param array<string, mixed> $args
+	 * @return array<string, string>
 	 */
 	public function terms_clauses( $clauses = array(), $taxonomies = array(), $args = array() ) {
 
@@ -750,7 +830,7 @@ final class WP_Term_Order {
 	 *
 	 * @since 0.1.0
 	 * @param  string $orderby
-	 * @param  array  $args
+	 * @param  array<string, mixed> $args
 	 * @return string
 	 */
 	public function get_terms_orderby( $orderby = 't.name', $args = array() ) {
@@ -760,10 +840,23 @@ final class WP_Term_Order {
 			return $orderby;
 		}
 
-		// Bail if taxonomy orderby override not supported
-		if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
-			return $orderby;
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+		// An explicit request for term order is not an implicit override.
+		$explicit_order = isset( $args['orderby'] ) && ( 'order' === $args['orderby'] );
+
+		if ( ! $explicit_order ) {
+
+			// Allow a single query to preserve its requested ordering.
+			if ( isset( $args['wp_term_order_override'] ) && ( false === wp_validate_boolean( $args['wp_term_order_override'] ) ) ) {
+				return $orderby;
+			}
+
+			// Bail if taxonomy orderby override not supported.
+			if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
+				return $orderby;
+			}
 		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Default to not overriding
 		$override = false;
@@ -786,7 +879,7 @@ final class WP_Term_Order {
 		if ( 'modify_tables' === $this->db_strategy ) {
 
 			// Explicitly asking for "order" column
-			if ( 'order' === $args['orderby'] ) {
+			if ( $explicit_order ) {
 				$orderby = 'tt.order';
 
 			// Falling back to "t.name" so we'll guess at an override
@@ -801,7 +894,7 @@ final class WP_Term_Order {
 		// Explicitly meta
 		} elseif ( 'meta' === $this->db_strategy ) {
 			if (
-				( 'order' === $args['orderby'] )
+				$explicit_order
 				||
 				( 't.name' === $orderby )
 				||
@@ -814,8 +907,17 @@ final class WP_Term_Order {
 				$r = array_merge( $args, array(
 					'meta_query' => array(
 						'order_clause' => array(
-							'key'  => 'order',
-							'type' => 'NUMERIC'
+							'relation' => 'OR',
+							array(
+								'key'     => 'order',
+								'type'    => 'NUMERIC',
+								'compare' => 'EXISTS',
+							),
+							array(
+								'key'     => 'order',
+								'type'    => 'NUMERIC',
+								'compare' => 'NOT EXISTS',
+							)
 						)
 					)
 				) );
@@ -907,6 +1009,7 @@ final class WP_Term_Order {
 	 * Runs on `admin_init` hook.
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	private function maybe_upgrade_database() {
 
@@ -925,6 +1028,7 @@ final class WP_Term_Order {
 	 * @since 0.1.0
 	 * @param  int    $old_version
 	 * @global object $wpdb
+	 * @return void
 	 */
 	private function upgrade_database( $old_version = 0 ) {
 		global $wpdb;
@@ -936,6 +1040,9 @@ final class WP_Term_Order {
 
 			// The main column alter
 			if ( $old_version < 201508110005 ) {
+
+				// Safe: $wpdb->term_taxonomy is a sanitized WordPress core table name
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$wpdb->query( "ALTER TABLE `{$wpdb->term_taxonomy}` ADD `order` INT (11) NOT NULL DEFAULT 0;" );
 			}
 		}
@@ -943,7 +1050,8 @@ final class WP_Term_Order {
 		// Migrate column values to meta
 		if ( $old_version < 202106140001 ) {
 
-			// Query for all terms
+			// Safe: $wpdb->term_taxonomy is a sanitized WordPress core table name
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$terms = $wpdb->get_results( "SELECT * FROM `{$wpdb->term_taxonomy}`;" );
 
 			// Loop through and copy to meta
@@ -951,7 +1059,7 @@ final class WP_Term_Order {
 				foreach ( $terms as $term ) {
 
 					// Skip if not set
-					if ( ! isset( $term->order ) || empty( $term->taxonomy ) ) {
+					if ( ! is_object( $term ) || ! isset( $term->term_id, $term->order ) || empty( $term->taxonomy ) ) {
 						continue;
 					}
 
@@ -976,12 +1084,35 @@ final class WP_Term_Order {
 	 * Handle AJAX term reordering
 	 *
 	 * @since 0.1.0
+	 * @return void
 	 */
 	public function ajax_reordering_terms() {
 
-		// Bail if required term data is missing
-		if ( empty( $_POST['id'] ) || empty( $_POST['tax'] ) || ( ! isset( $_POST['previd'] ) && ! isset( $_POST['nextid'] ) ) ) {
-			die( -1 );
+		// Validate nonce for this action first
+		check_ajax_referer( 'wp_term_order_reordering_terms', 'nonce' );
+
+		// Bail if required term data is missing or fails validation
+		if (
+			empty( $_POST['id'] ) || ! is_numeric( $_POST['id'] )
+			||
+			empty( $_POST['tax'] ) || ! is_string( $_POST['tax'] )
+			||
+			(
+				! isset( $_POST['previd'] )
+				&&
+				! isset( $_POST['nextid'] )
+			)
+		) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid request data', 'wp-term-order' ) ) );
+		}
+
+		// Bail if prev && next ID are not numeric
+		if (
+			! is_numeric( $_POST['previd'] )
+			&&
+			! is_numeric( $_POST['nextid'] )
+		) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid position data', 'wp-term-order' ) ) );
 		}
 
 		// Sanitize
@@ -991,33 +1122,34 @@ final class WP_Term_Order {
 		// Attempt to get the taxonomy
 		$tax = get_taxonomy( $taxonomy );
 
-		// Bail if taxonomy does not exist
-		if ( empty( $tax ) || ! $this->taxonomy_supported( $tax ) ) {
-			die( -1 );
+		// Bail if taxonomy does not exist or is not supported
+		if ( empty( $tax ) || ! $this->taxonomy_supported( $taxonomy ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid taxonomy', 'wp-term-order' ) ) );
 		}
 
-		// Bail if current user cannot assign terms
-		if ( ! current_user_can( $tax->cap->edit_terms ) ) {
-			die( -1 );
+		// Bail if current user cannot assign term
+		if ( ! current_user_can( 'edit_term', $term_id ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Permission denied', 'wp-term-order' ) ) );
 		}
 
 		// Bail if term cannot be found
 		$term = get_term( $term_id, $taxonomy );
-		if ( empty( $term ) ) {
-			die( -1 );
+		if ( ! $term instanceof WP_Term ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Term not found', 'wp-term-order' ) ) );
 		}
 
 		// Sanitize positions
 		$previd   = empty( $_POST['previd']   ) ? false : (int) $_POST['previd'];
 		$nextid   = empty( $_POST['nextid']   ) ? false : (int) $_POST['nextid'];
 		$start    = empty( $_POST['start']    ) ? 1     : (int) $_POST['start'];
-		$excluded = empty( $_POST['excluded'] )
+		$excluded = empty( $_POST['excluded'] ) || ! wp_is_numeric_array( $_POST['excluded'] )
 			? array( $term->term_id )
-			: array_filter( (array) $_POST['excluded'], 'intval' );
+			: wp_parse_id_list( $_POST['excluded'] );
 
 		// Default return values
 		$retval  = new stdClass;
 		$new_pos = array();
+		$reload  = isset( $_POST['reload'] ) && 1 === absint( wp_unslash( $_POST['reload'] ) ); // phpcs:ignore Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 
 		// attempt to get the intended parent...
 		$parent_id        = $term->parent;
@@ -1032,7 +1164,7 @@ final class WP_Term_Order {
 		// If the next term's parent isn't the same as our parent, we need more info
 		} elseif ( $next_term_parent !== $parent_id ) {
 			$prev_term_parent = $previd
-				? wp_get_term_taxonomy_parent_id( $nextid, $taxonomy )
+				? wp_get_term_taxonomy_parent_id( $previd, $taxonomy )
 				: false;
 
 			// If the previous term is not our parent now, set it
@@ -1048,16 +1180,50 @@ final class WP_Term_Order {
 			$nextid = false;
 		}
 
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+		$parent_id      = max( 0, (int) $parent_id );
+		$parent_changed = is_taxonomy_hierarchical( $taxonomy ) && (int) $term->parent !== $parent_id;
+
+		if ( $parent_changed ) {
+			$parent_ancestors = $parent_id
+				? array_map( 'intval', get_ancestors( $parent_id, $taxonomy, 'taxonomy' ) )
+				: array();
+
+			if ( $term_id === $parent_id || in_array( $term_id, $parent_ancestors, true ) ) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Invalid term parent', 'wp-term-order' ) ) );
+			}
+
+			$reload = true;
+		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
+
 		// Get term siblings for relative ordering
-		$siblings = get_terms( $taxonomy, array(
+		$siblings = get_terms( array(
+			'taxonomy'   => $taxonomy,
 			'depth'      => 1,
 			'number'     => 100,
-			'parent'     => $parent_id,
+			'parent'     => (int) $parent_id,
 			'orderby'    => 'order',
 			'order'      => 'ASC',
 			'hide_empty' => false,
-			'exclude'    => array_unique( $excluded )
+			'exclude'    => $excluded
 		) );
+
+		// Bail if error
+		if ( is_wp_error( $siblings ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Failed to get siblings', 'wp-term-order' ) ) );
+		}
+
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+		// A move between sibling groups must update the term's actual hierarchy.
+		if ( $parent_changed ) {
+			$updated = wp_update_term( $term->term_id, $taxonomy, array( 'parent' => $parent_id ) );
+
+			if ( is_wp_error( $updated ) ) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Failed to update term parent', 'wp-term-order' ) ) );
+			}
+		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Loop through siblings and update terms
 		foreach ( $siblings as $sibling ) {
@@ -1072,17 +1238,15 @@ final class WP_Term_Order {
 			if ( $nextid === (int) $sibling->term_id ) {
 				$this->set_term_order( $term->term_id, $taxonomy, $start, true );
 
-				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+				$term_ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
 
 				$new_pos[ $term->term_id ] = array(
 					'order'  => $start,
 					'parent' => $parent_id,
-					'depth'  => count( $ancestors ),
+					'depth'  => count( $term_ancestors ),
 				);
 
 				$start++;
-			} else {
-				$ancestors = array();
 			}
 
 			// Get the term order, either from object or meta
@@ -1100,10 +1264,12 @@ final class WP_Term_Order {
 				$this->set_term_order( $sibling->term_id, $taxonomy, $start, true );
 			}
 
+			$sibling_ancestors = get_ancestors( $sibling->term_id, $taxonomy, 'taxonomy' );
+
 			$new_pos[ $sibling->term_id ] = array(
 				'order'  => $start,
 				'parent' => $parent_id,
-				'depth'  => count( $ancestors )
+				'depth'  => count( $sibling_ancestors )
 			);
 
 			$start++;
@@ -1111,17 +1277,15 @@ final class WP_Term_Order {
 			if ( empty( $nextid ) && ( $previd === (int) $sibling->term_id ) ) {
 				$this->set_term_order( $term->term_id, $taxonomy, $start, true );
 
-				$ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+				$term_ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
 
 				$new_pos[ $term->term_id ] = array(
 					'order'  => $start,
 					'parent' => $parent_id,
-					'depth'  => count( $ancestors ),
+					'depth'  => count( $term_ancestors ),
 				);
 
 				$start++;
-			} else {
-				$ancestors = array();
 			}
 		}
 
@@ -1133,7 +1297,8 @@ final class WP_Term_Order {
 				'nextid'   => $nextid,
 				'start'    => $start,
 				'excluded' => array_unique( array_merge( array_keys( $new_pos ), $excluded ) ),
-				'taxonomy' => $taxonomy
+				'taxonomy' => $taxonomy,
+				'reload'   => $reload ? 1 : 0,
 			);
 		} else {
 			$retval->next = false;
@@ -1142,7 +1307,8 @@ final class WP_Term_Order {
 		if ( empty( $retval->next ) ) {
 
 			// If the moved term has children, refresh the page for UI reasons
-			$children = get_terms( $taxonomy, array(
+			$children = get_terms( array(
+				'taxonomy'   => $taxonomy,
 				'number'     => 1,
 				'depth'      => 1,
 				'orderby'    => 'order',
@@ -1152,15 +1318,16 @@ final class WP_Term_Order {
 				'hide_empty' => false
 			) );
 
-			if ( ! empty( $children ) ) {
-				die( 'children' );
+			if ( ! empty( $children ) && ! is_wp_error( $children ) ) {
+				wp_send_json_error( array( 'message' => 'children' ) );
 			}
 		}
 
 		// Add to return value
 		$retval->new_pos = $new_pos;
+		$retval->reload  = $reload; // phpcs:ignore Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 
-		die( json_encode( $retval ) );
+		wp_send_json_success( $retval );
 	}
 }
 endif;
@@ -1169,6 +1336,7 @@ endif;
  * Instantiate the main WordPress Term Order class
  *
  * @since 0.1.0
+ * @return WP_Term_Order
  */
 function _wp_term_order() {
 	static $wp_term_order = null;

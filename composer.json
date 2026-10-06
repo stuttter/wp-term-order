@@ -4,8 +4,14 @@
   "homepage": "https://github.com/stuttter/wp-term-order",
   "type": "wordpress-plugin",
   "require": {
-    "php": ">=5.2",
+    "php": ">=7.4",
     "composer/installers": "^1.0 || ^2.0"
+  },
+  "require-dev": {
+    "johnbillion/wp-compat": "^2.0.1",
+    "php-stubs/wordpress-stubs": "7.1.*",
+    "phpstan/phpstan": "^2.2.13",
+    "phpunit/phpunit": "^9.6"
   },
   "license": "GPL-2.0-or-later",
   "authors": [
@@ -13,5 +19,23 @@
       "name": "John James Jacoby",
       "email": "johnjamesjacoby@me.com"
     }
-  ]
+  ],
+  "autoload-dev": {
+    "classmap": [
+      "tests/"
+    ]
+  },
+  "scripts": {
+    "phpstan": "phpstan analyse --no-progress --memory-limit=1G",
+    "test": "phpunit"
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true
+    },
+    "platform": {
+      "php": "7.4.0"
+    },
+    "sort-packages": true
+  }
 }

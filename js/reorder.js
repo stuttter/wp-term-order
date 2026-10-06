@@ -1,4 +1,4 @@
-/* global inlineEditTax, ajaxurl */
+/* global inlineEditTax, ajaxurl, wpTermOrder */
 
 var sortable_terms_table = jQuery( '.wp-list-table tbody' ),
 	rows                 = sortable_terms_table.children('tr'),
@@ -110,6 +110,7 @@ sortable_terms_table.sortable( {
 		// Go do the sorting stuff via ajax
 		jQuery.post( ajaxurl, {
 			action: 'reordering_terms',
+			nonce:  wpTermOrder.nonce,
 			id:     termid,
 			previd: prevtermid,
 			nextid: nexttermid,
@@ -127,23 +128,14 @@ sortable_terms_table.sortable( {
  */
 function term_order_update_callback( response, post ) {
 
-	// Default values
-	var error   = false,
-		changes = {},
-		new_pos = {};
-
-	// Catch errors
-	try {
-		changes = JSON.parse( response ),
-		new_pos = changes.new_pos;
-		error   = ( 'success' !== post );
-
-	} catch ( e ) {
-		error = true;
+	// Check if term has children (special case that requires page reload)
+	if ( response && response.data && 'children' === response.data.message ) {
+		window.location.reload();
+		return;
 	}
 
-	// Bail on early error
-	if ( true === error ) {
+	// Handle errors or missing response
+	if ( ! response || ! response.success ) {
 		sortable_terms_table
 			.hide()
 			.sortable( 'cancel' )
@@ -156,11 +148,9 @@ function term_order_update_callback( response, post ) {
 		return;
 	}
 
-	// Bail if term has children
-	if ( 'children' === response ) {
-		window.location.reload();
-		return;
-	}
+	// Extract data from successful response
+	var changes = response.data || {},
+		new_pos = changes.new_pos || {};
 
 	// Empty out order texts
 	for ( var key in new_pos ) {
@@ -179,14 +169,22 @@ function term_order_update_callback( response, post ) {
 	// Maybe repost the next change
 	if ( changes.next ) {
 		jQuery.post( ajaxurl, {
-			action:  'reordering_terms',
+			action:   'reordering_terms',
+			nonce:    wpTermOrder.nonce,
 			id:       changes.next['id'],
 			previd:   changes.next['previd'],
 			nextid:   changes.next['nextid'],
 			start:    changes.next['start'],
 			excluded: changes.next['excluded'],
-			tax:      taxonomy
+			tax:      taxonomy,
+			reload:   changes.next['reload']
 		}, term_order_update_callback );
+	}
+
+	// Refresh hierarchy-dependent row markup after the final batch.
+	if ( ! changes.next && changes.reload ) {
+		window.location.reload();
+		return;
 	}
 
 	// Update and more clean-up
