@@ -24,7 +24,6 @@ function apply_filters( $hook, $value, ...$arguments ) {
 	return null === $result ? $value : $result;
 }
 function sanitize_key( $value ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/', '', (string) $value ) ); }
-
 function is_admin() { return (bool) ( wpto_test_call( __FUNCTION__, array() ) ?? false ); }
 function is_wp_error( $value ) { return $value instanceof WP_Error; }
 function get_term( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
