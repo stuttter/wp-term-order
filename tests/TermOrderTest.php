@@ -275,7 +275,13 @@ final class TermOrderTest extends TestCase {
 
 		$this->assertSame(
 			$expected,
-			$this->plugin->get_terms_orderby( 'anything', array( 'taxonomy' => array( 'category' ), 'orderby' => 'order' ) )
+			$this->plugin->get_terms_orderby(
+				'anything',
+				array(
+					'taxonomy' => array( 'category' ),
+					'orderby'  => 'order',
+				)
+			)
 		);
 	}
 
@@ -293,8 +299,8 @@ final class TermOrderTest extends TestCase {
 			$this->plugin->get_terms_orderby(
 				't.name',
 				array(
-					'taxonomy'              => array( 'category' ),
-					'orderby'               => 'name',
+					'taxonomy'               => array( 'category' ),
+					'orderby'                => 'name',
 					'wp_term_order_override' => false,
 				)
 			)
@@ -315,6 +321,11 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * Database strategies and their explicit orderby clauses.
+	 *
+	 * @return array<string, array<int, string>>
+	 */
 	public static function explicitOrderStrategies(): array {
 		return array(
 			'modified table' => array( 'modify_tables', 'tt.order' ),

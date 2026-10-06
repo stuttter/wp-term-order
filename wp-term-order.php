@@ -840,21 +840,23 @@ final class WP_Term_Order {
 			return $orderby;
 		}
 
-		// An explicit request for term order is not an implicit override
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
+		// An explicit request for term order is not an implicit override.
 		$explicit_order = isset( $args['orderby'] ) && ( 'order' === $args['orderby'] );
 
 		if ( ! $explicit_order ) {
 
-			// Allow a single query to preserve its requested ordering
+			// Allow a single query to preserve its requested ordering.
 			if ( isset( $args['wp_term_order_override'] ) && ( false === $args['wp_term_order_override'] ) ) {
 				return $orderby;
 			}
 
-			// Bail if taxonomy orderby override not supported
+			// Bail if taxonomy orderby override not supported.
 			if ( ! $this->taxonomy_override_orderby_supported( $args['taxonomy'] ) ) {
 				return $orderby;
 			}
 		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Default to not overriding
 		$override = false;
