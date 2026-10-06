@@ -5,6 +5,26 @@
  * @package WP_Term_OrderTests
  */
 
+if ( ! function_exists( 'wp_validate_boolean' ) ) {
+	/**
+	 * Normalize a boolean query value like WordPress.
+	 *
+	 * @param mixed $value Query value.
+	 * @return bool Normalized value.
+	 */
+	function wp_validate_boolean( $value ) {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_string( $value ) && ( 'false' === strtolower( $value ) ) ) {
+			return false;
+		}
+
+		return (bool) $value;
+	}
+}
+
 /**
  * Resolve whether the taxonomy supports parents in the AJAX fixture.
  *

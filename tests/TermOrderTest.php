@@ -6,25 +6,6 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/ajax-fixtures.php';
 
-/**
- * Normalize a boolean query value like WordPress.
- *
- * @param mixed $value Query value.
- */
-if ( ! function_exists( 'wp_validate_boolean' ) ) {
-	function wp_validate_boolean( $value ) {
-		if ( is_bool( $value ) ) {
-			return $value;
-		}
-
-		if ( is_string( $value ) && ( 'false' === strtolower( $value ) ) ) {
-			return false;
-		}
-
-		return (bool) $value;
-	}
-}
-
 final class TermOrderTest extends TestCase {
 	private $plugin;
 
@@ -310,8 +291,7 @@ final class TermOrderTest extends TestCase {
 
 			$this->assertSame(
 				$expected,
-				$this->plugin->get_terms_orderby( 'anything', $query_args ),
-				'Failed to preserve explicit ordering for ' . var_export( $override, true ) . '.'
+				$this->plugin->get_terms_orderby( 'anything', $query_args )
 			);
 
 			if ( 'meta' === $strategy ) {
@@ -327,7 +307,10 @@ final class TermOrderTest extends TestCase {
 	 */
 	private function assert_meta_order_clauses( array $args ): void {
 		$clauses = $this->plugin->terms_clauses(
-			array( 'join' => '', 'where' => '' ),
+			array(
+				'join'  => '',
+				'where' => '',
+			),
 			array( 'category' ),
 			$args
 		);
@@ -376,8 +359,7 @@ final class TermOrderTest extends TestCase {
 						'orderby'                => 'name',
 						'wp_term_order_override' => $override,
 					)
-				),
-				'Failed to disable the override for ' . var_export( $override, true ) . '.'
+				)
 			);
 		}
 	}
@@ -402,8 +384,7 @@ final class TermOrderTest extends TestCase {
 						'orderby'                => 'name',
 						'wp_term_order_override' => $override,
 					)
-				),
-				'Failed to preserve the override for ' . var_export( $override, true ) . '.'
+				)
 			);
 		}
 	}
