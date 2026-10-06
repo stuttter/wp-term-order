@@ -1141,6 +1141,7 @@ final class WP_Term_Order {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid request data', 'wp-term-order' ) ) );
 		}
 
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 		// Bail if adjacent IDs are malformed.
 		if (
 			(
@@ -1163,6 +1164,7 @@ final class WP_Term_Order {
 		) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid position data', 'wp-term-order' ) ) );
 		}
+		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Sanitize
 		$term_id  = absint( $_POST['id'] );
@@ -1201,6 +1203,7 @@ final class WP_Term_Order {
 		$new_pos = array();
 		$reload  = isset( $_POST['reload'] ) && 1 === absint( wp_unslash( $_POST['reload'] ) ); // phpcs:ignore Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 
+		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 		// Attempt to get the intended parent.
 		$parent_id        = $term->parent;
 		$next_term_parent = $nextid
@@ -1248,7 +1251,6 @@ final class WP_Term_Order {
 			$nextid = false;
 		}
 
-		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 		$parent_id      = max( 0, (int) $parent_id );
 		$parent_changed = is_taxonomy_hierarchical( $taxonomy ) && (int) $term->parent !== $parent_id;
 
@@ -1305,7 +1307,7 @@ final class WP_Term_Order {
 				'depth'  => count( $term_ancestors ),
 			);
 
-			$start++;
+			++$start;
 		}
 
 		// Loop through siblings and update terms
