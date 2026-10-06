@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070005;
+	public $db_version = 202602070006;
 
 	/**
 	 * @var string Database version
@@ -444,6 +444,55 @@ final class WP_Term_Order {
 			.term-order-helper-root {
 				background: #f0f6fc;
 				font-weight: 600;
+			}
+
+			.term-order-drop-preview {
+				position: absolute;
+				z-index: 99999;
+				box-sizing: border-box;
+				overflow: hidden;
+				border: 2px dashed #2271b1;
+				border-radius: 3px;
+				background: rgba(240, 246, 252, 0.94);
+				box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+				color: #1d2327;
+				pointer-events: none;
+				transition: left 80ms ease-out, width 80ms ease-out;
+			}
+
+			.term-order-preview-item {
+				position: relative;
+				padding-top: 6px;
+				padding-right: 10px;
+				padding-bottom: 6px;
+				border-top: 1px solid rgba(34, 113, 177, 0.2);
+				line-height: 1.25;
+			}
+
+			.term-order-preview-item:first-child {
+				border-top: 0;
+			}
+
+			.term-order-preview-item:not(.term-order-preview-root)::before {
+				content: "↳";
+				position: absolute;
+				margin-left: -15px;
+				color: #646970;
+			}
+
+			.term-order-preview-root {
+				font-weight: 600;
+			}
+
+			.term-order-preview-target {
+				display: inline-block;
+				margin-left: 8px;
+				padding: 1px 5px;
+				border-radius: 10px;
+				background: #2271b1;
+				color: #fff;
+				font-size: 11px;
+				font-weight: 400;
 			}
 
 			.term-order-subtree-helper .term-order-parent-target {

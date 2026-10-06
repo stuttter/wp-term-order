@@ -187,6 +187,27 @@ function term_order_build_helper( row ) {
 }
 
 /**
+ * Build the destination preview for a moving subtree.
+ *
+ * @param {object} node Tree node.
+ * @returns {jQuery}
+ */
+function term_order_build_preview( node ) {
+	var preview = jQuery( '<div class="term-order-drop-preview" />' ),
+		nodes = [ node ].concat( term_order_descendants( node ) );
+
+	jQuery.each( nodes, function( index, current ) {
+		jQuery( '<div class="term-order-preview-item" />' )
+			.toggleClass( 'term-order-preview-root', 0 === index )
+			.css( 'padding-left', 12 + ( ( current.level - node.level ) * 20 ) )
+			.text( term_order_node_label( current ) )
+			.appendTo( preview );
+	} );
+
+	return preview;
+}
+
+/**
  * Add the insertion points for one sibling group.
  *
  * @param {Array}       slots    Destination slots.
@@ -269,17 +290,14 @@ function term_order_build_slots( node, roots ) {
  * Return the slot closest to the pointer.
  *
  * @param {Array}  slots Slots in the visible hierarchy.
- * @param {number} pageX Pointer horizontal position.
  * @param {number} pageY Pointer position.
- * @param {number} originX Pointer position when dragging started.
- * @param {number} originDepth Original hierarchy depth.
+ * @param {number} targetDepth Snapped hierarchy depth.
  * @returns {object|null}
  */
-function term_order_closest_slot( slots, pageX, pageY, originX, originDepth ) {
+function term_order_closest_slot( slots, pageY, targetDepth ) {
 	var closest = null,
 		distance = Number.MAX_VALUE,
-		depthDistance = Number.MAX_VALUE,
-		targetDepth = Math.max( 0, originDepth + Math.round( ( pageX - originX ) / 24 ) );
+		depthDistance = Number.MAX_VALUE;
 
 	jQuery.each( slots, function( index, slot ) {
 		var top = slot.anchor.offset().top,
@@ -304,13 +322,50 @@ function term_order_closest_slot( slots, pageX, pageY, originX, originDepth ) {
 }
 
 /**
+ * Snap horizontal pointer movement to one hierarchy level at a time.
+ *
+ * @param {object} state Active drag state.
+ * @param {number} pageX Pointer horizontal position.
+ * @returns {number}
+ */
+function term_order_snap_depth( state, pageX ) {
+	var step = 24;
+
+	while ( pageX - state.depth_x >= step ) {
+		if ( state.target_depth >= state.max_depth ) {
+			state.depth_x = pageX;
+			break;
+		}
+
+		state.target_depth++;
+		state.depth_x += step;
+	}
+
+	while ( pageX - state.depth_x <= -step ) {
+		if ( state.target_depth <= 0 ) {
+			state.depth_x = pageX;
+			break;
+		}
+
+		state.target_depth--;
+		state.depth_x -= step;
+	}
+
+	return state.target_depth;
+}
+
+/**
  * Show the insertion boundary and parent selected by a slot.
  *
  * @param {object} slot Destination slot.
  * @returns {void}
  */
 function term_order_show_slot( slot ) {
-	var label = wpTermOrder.topLevel;
+	var label = wpTermOrder.topLevel,
+		top = slot.anchor.offset().top,
+		name_column = slot.anchor.find( '.column-name' ),
+		left,
+		width;
 
 	sortable_terms_table.children( 'tr' )
 		.removeClass( 'term-order-drop-before term-order-drop-after' );
@@ -324,6 +379,22 @@ function term_order_show_slot( slot ) {
 	}
 
 	drag_state.helper.find( '.term-order-parent-target' ).text( label );
+
+	if ( 'after' === slot.type ) {
+		top += slot.anchor.outerHeight();
+	}
+
+	left = ( name_column.length ? name_column.offset().left : slot.anchor.offset().left ) + 12 + ( slot.depth * 20 );
+	width = Math.max( 220, sortable_terms_table.offset().left + sortable_terms_table.outerWidth() - left - 12 );
+
+	drag_state.preview
+		.find( '.term-order-preview-target' ).text( label ).end()
+		.css( {
+			left:  left,
+			top:   top + 2,
+			width: width
+		} )
+		.show();
 }
 
 /**
@@ -382,6 +453,10 @@ function term_order_clear_drag_styles() {
 	sortable_terms_table.children( 'tr' )
 		.removeClass( 'term-order-drag-group term-order-drop-before term-order-drop-after' );
 	jQuery( '.term-order-subtree-helper .term-order-parent-target' ).remove();
+
+	if ( drag_state && drag_state.preview ) {
+		drag_state.preview.remove();
+	}
 }
 
 /**
@@ -494,6 +569,7 @@ sortable_terms_table.sortable( {
 		node_index = jQuery.inArray( node, siblings );
 		drag_state = {
 			chosen:        null,
+			depth_x:       e.pageX,
 			descendants:   descendants,
 			helper:        ui.helper,
 			node:          node,
@@ -501,8 +577,8 @@ sortable_terms_table.sortable( {
 			original_nextid: siblings[ node_index + 1 ] ? siblings[ node_index + 1 ].id : false,
 			original_parentid: node.parent ? node.parent.id : 0,
 			original_previd: node_index > 0 ? siblings[ node_index - 1 ].id : false,
-			origin_depth:  node.level,
-			origin_x:      e.pageX,
+			max_depth:     0,
+			preview:       term_order_build_preview( node ).appendTo( 'body' ).hide(),
 			scoped:        node.scoped,
 			slots:         [],
 			submitted:     false,
@@ -517,11 +593,23 @@ sortable_terms_table.sortable( {
 
 		if ( node.scoped ) {
 			drag_state.slots = term_order_build_slots( node, tree );
+
+			if ( drag_state.slots.length ) {
+				drag_state.max_depth = Math.max.apply( null, jQuery.map( drag_state.slots, function( slot ) {
+					return slot.depth;
+				} ) );
+			}
 		}
+
+		drag_state.target_depth = Math.min( node.level, drag_state.max_depth );
 
 		ui.helper.find( '.term-order-helper-root' ).first().append(
 			jQuery( '<span class="term-order-parent-target" />' )
 				.text( node.parent ? wpTermOrder.under + ' ' + node.parent.element.find( '.row-title' ).first().text() : wpTermOrder.topLevel )
+		);
+
+		drag_state.preview.find( '.term-order-preview-root' ).first().append(
+			jQuery( '<span class="term-order-preview-target" />' )
 		);
 	},
 
@@ -541,10 +629,8 @@ sortable_terms_table.sortable( {
 
 		chosen = term_order_closest_slot(
 			drag_state.slots,
-			e.pageX,
 			e.pageY,
-			drag_state.origin_x,
-			drag_state.origin_depth
+			term_order_snap_depth( drag_state, e.pageX )
 		);
 		if ( chosen === drag_state.chosen ) {
 			return;
