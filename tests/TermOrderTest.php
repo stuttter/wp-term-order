@@ -364,6 +364,94 @@ final class TermOrderTest extends TestCase {
 		}
 	}
 
+	/** A query opt-out does not reuse metadata clauses from an earlier query. */
+	public function test_query_opt_out_does_not_reuse_previous_meta_clauses(): void {
+		$this->plugin->db_strategy = 'meta';
+
+		$ordered_args   = array(
+			'taxonomy' => array( 'category' ),
+			'orderby'  => 'name',
+		);
+		$opted_out_args = array(
+			'taxonomy'               => array( 'category' ),
+			'orderby'                => 'name',
+			'wp_term_order_override' => false,
+		);
+
+		$this->plugin->get_terms_orderby( 't.name', $ordered_args );
+		$this->assert_meta_order_clauses( $ordered_args );
+
+		$this->plugin->get_terms_orderby( 't.name', $opted_out_args );
+
+		$this->assertSame(
+			array(
+				'join'  => '',
+				'where' => '',
+			),
+			$this->plugin->terms_clauses(
+				array(
+					'join'  => '',
+					'where' => '',
+				),
+				array( 'category' ),
+				$opted_out_args
+			)
+		);
+	}
+
+	/** A nested query does not discard metadata clauses for its outer query. */
+	public function test_nested_query_preserves_outer_meta_clauses(): void {
+		$this->plugin->db_strategy = 'meta';
+
+		$outer_args  = array(
+			'taxonomy' => array( 'category' ),
+			'orderby'  => 'order',
+		);
+		$nested_args = array(
+			'taxonomy' => array( 'category' ),
+			'orderby'  => 'name',
+		);
+
+		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_taxonomy_override_orderby_supported'] = static function () {
+			return false;
+		};
+
+		$this->plugin->get_terms_orderby( 'anything', $outer_args );
+		$this->plugin->get_terms_orderby( 't.name', $nested_args );
+
+		$this->assertSame(
+			array(
+				'join'  => '',
+				'where' => '',
+			),
+			$this->plugin->terms_clauses(
+				array(
+					'join'  => '',
+					'where' => '',
+				),
+				array( 'category' ),
+				$nested_args
+			)
+		);
+		$this->assert_meta_order_clauses( $outer_args );
+	}
+
+	/** Nested queries with matching arguments retain both sets of clauses. */
+	public function test_nested_queries_with_matching_args_preserve_both_meta_clauses(): void {
+		$this->plugin->db_strategy = 'meta';
+
+		$query_args = array(
+			'taxonomy' => array( 'category' ),
+			'orderby'  => 'order',
+		);
+
+		$this->plugin->get_terms_orderby( 'anything', $query_args );
+		$this->plugin->get_terms_orderby( 'anything', $query_args );
+
+		$this->assert_meta_order_clauses( $query_args );
+		$this->assert_meta_order_clauses( $query_args );
+	}
+
 	/**
 	 * True-like query values preserve the implicit ordering override.
 	 *
@@ -430,9 +518,14 @@ final class TermOrderTest extends TestCase {
 	public function test_meta_strategy_builds_numeric_order_clause(): void {
 		$this->plugin->db_strategy = 'meta';
 
+		$query_args = array(
+			'taxonomy' => array( 'category' ),
+			'orderby'  => 'name',
+		);
+
 		$this->assertSame(
 			'CAST(order_clause.meta_value AS SIGNED)',
-			$this->plugin->get_terms_orderby( 't.name', array( 'taxonomy' => array( 'category' ), 'orderby' => 'name' ) )
+			$this->plugin->get_terms_orderby( 't.name', $query_args )
 		);
 
 		$clauses = $this->plugin->terms_clauses(
