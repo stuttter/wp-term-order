@@ -847,7 +847,7 @@ final class WP_Term_Order {
 		if ( ! $explicit_order ) {
 
 			// Allow a single query to preserve its requested ordering.
-			if ( isset( $args['wp_term_order_override'] ) && ( false === $args['wp_term_order_override'] ) ) {
+			if ( isset( $args['wp_term_order_override'] ) && ( false === wp_validate_boolean( $args['wp_term_order_override'] ) ) ) {
 				return $orderby;
 			}
 

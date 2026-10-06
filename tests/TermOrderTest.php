@@ -294,17 +294,19 @@ final class TermOrderTest extends TestCase {
 	public function test_query_can_disable_implicit_orderby_override( string $strategy ): void {
 		$this->plugin->db_strategy = $strategy;
 
-		$this->assertSame(
-			't.name',
-			$this->plugin->get_terms_orderby(
+		foreach ( array( false, 0, '0', 'false' ) as $override ) {
+			$this->assertSame(
 				't.name',
-				array(
-					'taxonomy'               => array( 'category' ),
-					'orderby'                => 'name',
-					'wp_term_order_override' => false,
+				$this->plugin->get_terms_orderby(
+					't.name',
+					array(
+						'taxonomy'               => array( 'category' ),
+						'orderby'                => 'name',
+						'wp_term_order_override' => $override,
+					)
 				)
-			)
-		);
+			);
+		}
 	}
 
 	public function test_default_name_order_uses_column_order_with_name_tiebreaker(): void {
