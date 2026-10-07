@@ -184,7 +184,6 @@ function term_order_build_preview( node ) {
 			.data( 'term-label', term_order_node_label( current ) );
 
 		preview_row.find( 'input' ).removeAttr( 'id name' ).prop( 'disabled', true );
-		preview_row.find( '.row-actions' ).remove();
 		preview_row.children( '.hidden' ).remove();
 		preview_height += current.element.outerHeight();
 

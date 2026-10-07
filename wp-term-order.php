@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070010;
+	public $db_version = 202602070011;
 
 	/**
 	 * @var string Database version
@@ -453,6 +453,11 @@ final class WP_Term_Order {
 			.term-order-drop-preview .term-order-preview-row > th,
 			.term-order-drop-preview .term-order-preview-row > td {
 				box-sizing: border-box;
+			}
+
+			.term-order-drop-preview .row-actions {
+				position: relative !important;
+				visibility: hidden !important;
 			}
 
 			.wp-list-table.dragging .row-actions,
