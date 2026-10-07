@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070007;
+	public $db_version = 202602070008;
 
 	/**
 	 * @var string Database version
@@ -317,9 +317,7 @@ final class WP_Term_Order {
 				'term-order-reorder',
 				'wpTermOrder',
 				array(
-					'nonce'    => wp_create_nonce( 'wp_term_order_reordering_terms' ),
-					'topLevel' => esc_html__( 'Top level', 'wp-term-order' ),
-					'under'    => esc_html__( 'Under:', 'wp-term-order' ),
+					'nonce' => wp_create_nonce( 'wp_term_order_reordering_terms' ),
 				)
 			);
 		}
@@ -386,7 +384,7 @@ final class WP_Term_Order {
 			}
 
 			.wp-list-table .ui-sortable-placeholder {
-				height: 4px !important;
+				height: 0 !important;
 				outline: 0;
 				background: transparent !important;
 				visibility: visible !important;
@@ -410,40 +408,17 @@ final class WP_Term_Order {
 				box-shadow: inset 0 -3px #2271b1;
 			}
 
-			.term-order-subtree-helper {
-				z-index: 100000;
-				min-width: 260px;
-				max-width: 420px;
-				border: 1px solid #8c8f94;
-				border-radius: 3px;
-				background: #fff;
-				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
-				color: #1d2327;
+			.term-order-drag-proxy {
+				width: 1px !important;
+				height: 1px !important;
+				overflow: hidden !important;
+				visibility: hidden !important;
 			}
 
-			.term-order-helper-item {
-				position: relative;
-				padding-top: 7px;
-				padding-right: 12px;
-				padding-bottom: 7px;
-				border-top: 1px solid #dcdcde;
-				line-height: 1.35;
-			}
-
-			.term-order-helper-item:first-child {
-				border-top: 0;
-			}
-
-			.term-order-helper-item:not(.term-order-helper-root)::before {
-				content: "↳";
-				position: absolute;
-				margin-left: -15px;
-				color: #646970;
-			}
-
-			.term-order-helper-root {
-				background: #f0f6fc;
-				font-weight: 600;
+			.wp-list-table .term-order-drop-spacer > td {
+				padding: 0 !important;
+				border: 0 !important;
+				background: transparent !important;
 			}
 
 			.term-order-drop-preview {
@@ -463,14 +438,6 @@ final class WP_Term_Order {
 			.term-order-drop-preview .term-order-preview-row > th,
 			.term-order-drop-preview .term-order-preview-row > td {
 				box-sizing: border-box;
-			}
-
-			.term-order-subtree-helper .term-order-parent-target {
-				display: block;
-				margin-top: 4px;
-				color: #2271b1;
-				font-size: 12px;
-				font-weight: 400;
 			}
 
 			.wp-list-table.dragging .row-actions,

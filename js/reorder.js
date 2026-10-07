@@ -158,35 +158,6 @@ function term_order_node_label( node ) {
 }
 
 /**
- * Build a compact tree preview for the dragged subtree.
- *
- * @param {jQuery} row Term row.
- * @returns {jQuery}
- */
-function term_order_build_helper( row ) {
-	var tree = term_order_build_tree(),
-		node = term_order_find_node( tree, row ),
-		helper = jQuery( '<div class="term-order-subtree-helper" />' ),
-		nodes;
-
-	if ( ! node ) {
-		return row;
-	}
-
-	nodes = [ node ].concat( term_order_descendants( node ) );
-
-	jQuery.each( nodes, function( index, current ) {
-		jQuery( '<div class="term-order-helper-item" />' )
-			.toggleClass( 'term-order-helper-root', 0 === index )
-			.css( 'padding-left', 12 + ( ( current.level - node.level ) * 20 ) )
-			.text( term_order_node_label( current ) )
-			.appendTo( helper );
-	} );
-
-	return helper;
-}
-
-/**
  * Build the destination preview for a moving subtree.
  *
  * @param {object} node Tree node.
@@ -194,6 +165,7 @@ function term_order_build_helper( row ) {
  */
 function term_order_build_preview( node ) {
 	var source_table = sortable_terms_table.closest( 'table' ),
+		preview_height = 0,
 		preview = jQuery( '<table />' )
 			.attr( 'class', source_table.attr( 'class' ) )
 			.addClass( 'term-order-drop-preview' )
@@ -210,6 +182,7 @@ function term_order_build_preview( node ) {
 
 		preview_row.find( 'input' ).removeAttr( 'id name' ).prop( 'disabled', true );
 		preview_row.find( '.row-actions' ).remove();
+		preview_height += current.element.outerHeight();
 
 		preview_row.children().each( function( cell_index ) {
 			jQuery( this ).width( current.element.children().eq( cell_index ).outerWidth() );
@@ -218,7 +191,7 @@ function term_order_build_preview( node ) {
 		preview.find( 'tbody' ).append( preview_row );
 	} );
 
-	return preview;
+	return preview.data( 'preview-height', preview_height );
 }
 
 /**
@@ -375,8 +348,7 @@ function term_order_snap_depth( state, pageX ) {
  * @returns {void}
  */
 function term_order_show_slot( slot ) {
-	var label = wpTermOrder.topLevel,
-		top = slot.anchor.offset().top,
+	var top,
 		table = sortable_terms_table.closest( 'table' );
 
 	sortable_terms_table.children( 'tr' )
@@ -386,15 +358,15 @@ function term_order_show_slot( slot ) {
 		'before' === slot.type ? 'term-order-drop-before' : 'term-order-drop-after'
 	);
 
-	if ( slot.parent ) {
-		label = wpTermOrder.under + ' ' + slot.parent.element.find( '.row-title' ).first().text();
+	drag_state.spacer.detach();
+
+	if ( 'before' === slot.type ) {
+		drag_state.spacer.insertBefore( slot.anchor );
+	} else {
+		drag_state.spacer.insertAfter( slot.anchor );
 	}
 
-	drag_state.helper.find( '.term-order-parent-target' ).text( label );
-
-	if ( 'after' === slot.type ) {
-		top += slot.anchor.outerHeight();
-	}
+	top = drag_state.spacer.offset().top;
 
 	drag_state.preview
 		.css( {
@@ -470,10 +442,12 @@ function term_order_insert_descendants( state ) {
 function term_order_clear_drag_styles() {
 	sortable_terms_table.children( 'tr' )
 		.removeClass( 'term-order-drag-group term-order-drop-before term-order-drop-after' );
-	jQuery( '.term-order-subtree-helper .term-order-parent-target' ).remove();
-
 	if ( drag_state && drag_state.preview ) {
 		drag_state.preview.remove();
+	}
+
+	if ( drag_state && drag_state.spacer ) {
+		drag_state.spacer.remove();
 	}
 }
 
@@ -561,6 +535,7 @@ sortable_terms_table.sortable( {
 		var tree,
 			node,
 			descendants,
+			preview,
 			siblings,
 			node_index;
 
@@ -572,7 +547,7 @@ sortable_terms_table.sortable( {
 			ui.placeholder.children().last().remove();
 		}
 
-		ui.placeholder.height( 4 );
+		ui.placeholder.height( 0 );
 		ui.item.parent().parent().addClass( 'dragging' );
 
 		tree = term_order_build_tree();
@@ -583,22 +558,27 @@ sortable_terms_table.sortable( {
 		}
 
 		descendants = term_order_descendants( node );
+		preview = term_order_build_preview( node );
 		siblings = node.parent ? node.parent.children : tree;
 		node_index = jQuery.inArray( node, siblings );
 		drag_state = {
 			chosen:        null,
 			depth_x:       e.pageX,
 			descendants:   descendants,
-			helper:        ui.helper,
 			node:          node,
 			original_next: term_order_last_row( node ).nextAll( 'tr:not(.ui-sortable-placeholder)' ).first(),
 			original_nextid: siblings[ node_index + 1 ] ? siblings[ node_index + 1 ].id : false,
 			original_parentid: node.parent ? node.parent.id : 0,
 			original_previd: node_index > 0 ? siblings[ node_index - 1 ].id : false,
 			max_depth:     0,
-			preview:       term_order_build_preview( node ).appendTo( 'body' ).hide(),
+			preview:       preview.appendTo( 'body' ).hide(),
 			scoped:        node.scoped,
 			slots:         [],
+			spacer:        jQuery( '<tr class="term-order-drop-spacer no-items"><td></td></tr>' )
+				.find( 'td' )
+				.attr( 'colspan', node.element.children().length )
+				.height( preview.data( 'preview-height' ) + 4 )
+				.end(),
 			submitted:     false,
 			tree:          tree
 		};
@@ -621,11 +601,6 @@ sortable_terms_table.sortable( {
 
 		drag_state.target_depth = Math.min( node.level, drag_state.max_depth );
 
-		ui.helper.find( '.term-order-helper-root' ).first().append(
-			jQuery( '<span class="term-order-parent-target" />' )
-				.text( node.parent ? wpTermOrder.under + ' ' + node.parent.element.find( '.row-title' ).first().text() : wpTermOrder.topLevel )
-		);
-
 	},
 
 	/**
@@ -642,14 +617,13 @@ sortable_terms_table.sortable( {
 			return;
 		}
 
+		drag_state.spacer.detach();
+
 		chosen = term_order_closest_slot(
 			drag_state.slots,
 			e.pageY,
 			term_order_snap_depth( drag_state, e.pageX )
 		);
-		if ( chosen === drag_state.chosen ) {
-			return;
-		}
 
 		drag_state.chosen = chosen;
 		term_order_show_slot( chosen );
@@ -669,14 +643,14 @@ sortable_terms_table.sortable( {
 	},
 
 	/**
-	 * Show the dragged subtree as a compact tree.
+	 * Use an invisible proxy while the destination preview shows the subtree.
 	 *
 	 * @param {Event}  e  Sort event.
 	 * @param {jQuery} ui Term row.
 	 * @returns {jQuery}
 	 */
 	helper: function( e, ui ) {
-		return term_order_build_helper( ui );
+		return jQuery( '<div class="term-order-drag-proxy" aria-hidden="true" />' );
 	},
 
 	/**
