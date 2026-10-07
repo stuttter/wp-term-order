@@ -576,7 +576,7 @@ sortable_terms_table.sortable( {
 			slots:         [],
 			spacer:        jQuery( '<tr class="term-order-drop-spacer no-items"><td></td></tr>' )
 				.find( 'td' )
-				.attr( 'colspan', node.element.children().length )
+				.attr( 'colspan', node.element.children().not( '.hidden' ).length )
 				.height( preview.data( 'preview-height' ) + 4 )
 				.end(),
 			submitted:     false,

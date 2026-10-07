@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070008;
+	public $db_version = 202602070009;
 
 	/**
 	 * @var string Database version
