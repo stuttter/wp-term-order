@@ -169,8 +169,11 @@ function term_order_build_preview( node ) {
 		preview = jQuery( '<table />' )
 			.attr( 'class', source_table.attr( 'class' ) )
 			.addClass( 'term-order-drop-preview' )
+			.append( source_table.children( 'thead' ).clone( false, false ) )
 			.append( '<tbody />' ),
 		nodes = [ node ].concat( term_order_descendants( node ) );
+
+	preview.find( 'thead th' ).empty();
 
 	jQuery.each( nodes, function( index, current ) {
 		var preview_row = current.element.clone( false, false )
@@ -182,11 +185,8 @@ function term_order_build_preview( node ) {
 
 		preview_row.find( 'input' ).removeAttr( 'id name' ).prop( 'disabled', true );
 		preview_row.find( '.row-actions' ).remove();
+		preview_row.children( '.hidden' ).remove();
 		preview_height += current.element.outerHeight();
-
-		preview_row.children().each( function( cell_index ) {
-			jQuery( this ).width( current.element.children().eq( cell_index ).outerWidth() );
-		} );
 
 		preview.find( 'tbody' ).append( preview_row );
 	} );

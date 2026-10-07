@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070009;
+	public $db_version = 202602070010;
 
 	/**
 	 * @var string Database version
@@ -433,6 +433,21 @@ final class WP_Term_Order {
 
 			.term-order-drop-preview .term-order-preview-row {
 				display: table-row !important;
+			}
+
+			.term-order-drop-preview thead,
+			.term-order-drop-preview thead tr,
+			.term-order-drop-preview thead th {
+				height: 0 !important;
+				padding-top: 0 !important;
+				padding-bottom: 0 !important;
+				border: 0 !important;
+				font-size: 0 !important;
+				line-height: 0 !important;
+			}
+
+			.term-order-drop-preview thead {
+				visibility: collapse !important;
 			}
 
 			.term-order-drop-preview .term-order-preview-row > th,
