@@ -58,6 +58,12 @@ No. Order values are whole numbers. A term's parent is stored separately by Word
 
 Yes. Pass `wp_term_order_override` as `false` to preserve another `orderby` value for that query. For a supported taxonomy, an explicit `orderby` value of `order` is always honored. The `wp_term_order_taxonomy_override_orderby_supported` filter controls only the implicit override of WordPress's default term-name ordering.
 
+= Can terms be ordered differently for each post? =
+
+Yes. Categories and tags support per-post ordering automatically. For a custom taxonomy, pass `sort => true` when registering it. The post editor will add an order panel for that taxonomy, and WordPress will store the order in its existing `wp_term_relationships.term_order` column.
+
+Standard template functions such as `get_the_terms()` use the saved per-post order. A direct `wp_get_object_terms()` query can request `orderby => term_order`. The `wp_term_order_object_taxonomy_supported` filter can enable or disable this feature for an individual taxonomy.
+
 = Where can I get support? =
 
 The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/

@@ -61,6 +61,34 @@ The `wp_term_order_taxonomy_override_orderby_supported` filter controls only
 the implicit override of WordPress's default term-name ordering. It does not
 disable an explicit `orderby` value of `order`.
 
+### Can terms be ordered differently for each post?
+
+Yes. Categories and tags support per-post ordering automatically. For a custom
+taxonomy, enable WordPress's native relationship ordering when registering it:
+
+```
+register_taxonomy( 'genre', 'post', array(
+	'show_ui' => true,
+	'sort'    => true,
+) );
+```
+
+The post editor adds an order panel for each supported taxonomy. WordPress
+stores that order in `wp_term_relationships.term_order`, so no additional table
+or post metadata is required. Standard template functions such as
+`get_the_terms()` use the saved per-post order. For a direct object-term query,
+use WordPress's native `term_order` value:
+
+```
+$terms = wp_get_object_terms( $post_id, 'genre', array(
+	'orderby' => 'term_order',
+	'order'   => 'ASC',
+) );
+```
+
+The `wp_term_order_object_taxonomy_supported` filter can enable or disable the
+feature for an individual taxonomy.
+
 ### Where can I get support?
 
 The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order/
