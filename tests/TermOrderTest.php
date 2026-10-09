@@ -15,7 +15,44 @@ final class TermOrderTest extends TestCase {
 		$this->plugin         = new WP_Term_Order();
 		$this->plugin->taxonomies = array( 'category', 'post_tag' );
 
-		$_POST = array();
+		$_POST    = array();
+		$_REQUEST = array();
+	}
+
+	/**
+	 * Localize hierarchy controls only when WordPress displays the taxonomy tree.
+	 *
+	 * @dataProvider reorderingContexts
+	 * @param string               $taxonomy             Current taxonomy.
+	 * @param array<string, mixed> $request              Current request values.
+	 * @param bool                 $expected_hierarchical Expected hierarchy control state.
+	 * @param bool                 $expected_reorderable  Expected drag state.
+	 */
+	public function test_localized_reordering_context( string $taxonomy, array $request, bool $expected_hierarchical, bool $expected_reorderable ): void {
+		$_REQUEST = $request;
+		$GLOBALS['wpto_test']['returns']['get_current_screen'] = new WP_Screen( $taxonomy );
+
+		$this->plugin->localize_scripts();
+
+		$config = $GLOBALS['wpto_test']['calls']['wp_localize_script'][0][2];
+		$this->assertSame( $expected_hierarchical, $config['hierarchical'] );
+		$this->assertSame( $expected_reorderable, $config['reorderable'] );
+	}
+
+	/**
+	 * Reordering contexts.
+	 *
+	 * @return array<string, array{string, array<string, string>, bool, bool}>
+	 */
+	public function reorderingContexts(): array {
+		return array(
+			'category tree'       => array( 'category', array(), true, true ),
+			'category search'     => array( 'category', array( 's' => 'Hardware' ), false, false ),
+			'zero search'         => array( 'category', array( 's' => '0' ), true, true ),
+			'whitespace search'   => array( 'category', array( 's' => ' ' ), true, true ),
+			'sorted categories'   => array( 'category', array( 'orderby' => 'name' ), false, false ),
+			'flat taxonomy search' => array( 'post_tag', array( 's' => 'Hello' ), false, true ),
+		);
 	}
 
 	/**

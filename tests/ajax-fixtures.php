@@ -33,7 +33,7 @@ if ( ! function_exists( 'wp_validate_boolean' ) ) {
  */
 function is_taxonomy_hierarchical( $taxonomy ) {
 	wpto_test_call( __FUNCTION__, array( $taxonomy ) );
-	return true;
+	return 'category' === $taxonomy;
 }
 
 /**

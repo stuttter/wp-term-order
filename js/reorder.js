@@ -1,9 +1,13 @@
 /* global inlineEditTax, ajaxurl, wpTermOrder */
 
 var sortable_terms_table = jQuery( '.wp-list-table tbody' ),
-	taxonomy             = jQuery( 'form input[name="taxonomy"]' ).val(),
-	term_row             = '',
-	drag_state           = null;
+	taxonomy              = jQuery( 'form input[name="taxonomy"]' ).val(),
+	term_order_config     = 'undefined' !== typeof wpTermOrder ? wpTermOrder : {},
+	hierarchy_enabled     = !! term_order_config.hierarchical,
+	reordering_enabled    = !! term_order_config.nonce &&
+		( 'undefined' === typeof term_order_config.reorderable || !! term_order_config.reorderable ),
+	term_row              = '',
+	drag_state            = null;
 
 /**
  * Return the numeric term ID for a row.
@@ -38,7 +42,7 @@ function term_order_build_tree() {
 
 	sortable_terms_table.children( 'tr:not(.no-items):not(.inline-edit-row):not(.ui-sortable-placeholder)' ).each( function() {
 		var row = jQuery( this ),
-			level = term_order_row_level( row ),
+			level = hierarchy_enabled ? term_order_row_level( row ) : 0,
 			parent = level > 0 ? stack[ level - 1 ] : null,
 			node = {
 				children: [],
@@ -278,7 +282,7 @@ function term_order_add_group_slots( slots, parent, children, dragged, moved ) {
 function term_order_build_slots( node, roots ) {
 	var slots = [],
 		moved = [ node ].concat( term_order_descendants( node ) ),
-		parents = term_order_flatten_tree( roots );
+		parents = hierarchy_enabled ? term_order_flatten_tree( roots ) : [];
 
 	term_order_add_group_slots( slots, null, roots, node, moved );
 
@@ -292,38 +296,56 @@ function term_order_build_slots( node, roots ) {
 }
 
 /**
- * Return the slot closest to the pointer.
+ * Return the slot whose destination interval contains the pointer.
  *
  * @param {Array}  slots Slots in the visible hierarchy.
  * @param {number} pageY Pointer position.
  * @param {number} targetDepth Snapped hierarchy depth.
  * @returns {object|null}
  */
-function term_order_closest_slot( slots, pageY, targetDepth ) {
-	var closest = null,
-		distance = Number.MAX_VALUE,
-		depthDistance = Number.MAX_VALUE;
+function term_order_containing_slot( slots, pageY, targetDepth ) {
+	var boundaries = [],
+		chosen = null,
+		depthDistance = Number.POSITIVE_INFINITY,
+		firstTop = Number.POSITIVE_INFINITY,
+		chosenTop = Number.NEGATIVE_INFINITY;
 
 	jQuery.each( slots, function( index, slot ) {
-		var top = slot.anchor.offset().top,
-			vertical,
-			slotDepthDistance;
+		var top = slot.anchor.offset().top;
 
 		if ( 'after' === slot.type ) {
 			top += slot.anchor.outerHeight();
 		}
 
-		vertical = Math.abs( pageY - top );
-		slotDepthDistance = Math.abs( targetDepth - slot.depth );
+		boundaries.push( {
+			slot: slot,
+			top:  top
+		} );
+		firstTop = Math.min( firstTop, top );
 
-		if ( slotDepthDistance < depthDistance || ( slotDepthDistance === depthDistance && vertical < distance ) ) {
-			closest = slot;
-			distance = vertical;
+		if ( top <= pageY ) {
+			chosenTop = Math.max( chosenTop, top );
+		}
+	} );
+
+	if ( Number.NEGATIVE_INFINITY === chosenTop ) {
+		chosenTop = firstTop;
+	}
+
+	jQuery.each( boundaries, function( index, boundary ) {
+		var slotDepthDistance = Math.abs( targetDepth - boundary.slot.depth );
+
+		if ( boundary.top !== chosenTop ) {
+			return;
+		}
+
+		if ( slotDepthDistance < depthDistance ) {
+			chosen = boundary.slot;
 			depthDistance = slotDepthDistance;
 		}
 	} );
 
-	return closest;
+	return chosen;
 }
 
 /**
@@ -530,7 +552,7 @@ function term_order_submit_update( item, parentid, previd, nextid ) {
 	var termid = item.attr( 'id' ).replace( 'tag-', '' ),
 		request = {
 			action: 'reordering_terms',
-			nonce:  wpTermOrder.nonce,
+			nonce:  term_order_config.nonce,
 			id:     termid,
 			previd: previd || 0,
 			nextid: nextid || 0,
@@ -549,7 +571,9 @@ function term_order_submit_update( item, parentid, previd, nextid ) {
 
 	term_row.addClass( 'to-row-updating' );
 
-	jQuery.post( ajaxurl, request, term_order_update_callback );
+	jQuery.post( ajaxurl, request, term_order_update_callback ).fail( function() {
+		term_order_update_callback( false );
+	} );
 }
 
 /**
@@ -557,7 +581,7 @@ function term_order_submit_update( item, parentid, previd, nextid ) {
  *
  * @since 1.0.0
  */
-sortable_terms_table.sortable( {
+var term_order_sortable_options = {
 	appendTo:  'body',
 	items:     '> tr:not(.no-items)',
 	cancel:    '.inline-edit-row',
@@ -666,7 +690,7 @@ sortable_terms_table.sortable( {
 
 		drag_state.spacer.detach();
 
-		chosen = term_order_closest_slot(
+		chosen = term_order_containing_slot(
 			drag_state.slots,
 			e.pageY,
 			term_order_snap_depth( drag_state, e.pageX )
@@ -726,7 +750,7 @@ sortable_terms_table.sortable( {
 				state.submitted = true;
 				term_order_submit_update(
 					ui.item,
-					state.chosen.parentid,
+					hierarchy_enabled ? state.chosen.parentid : undefined,
 					state.chosen.previd,
 					state.chosen.nextid
 				);
@@ -762,7 +786,11 @@ sortable_terms_table.sortable( {
 
 		term_order_submit_update( ui.item, undefined, prevtermid, nexttermid );
 	}
-} );
+};
+
+if ( reordering_enabled ) {
+	sortable_terms_table.sortable( term_order_sortable_options );
+}
 
 /**
  * Update the term order based on the AJAX response.
@@ -805,7 +833,7 @@ function term_order_update_callback( response, post ) {
 	if ( changes.next ) {
 		jQuery.post( ajaxurl, {
 			action:   'reordering_terms',
-			nonce:    wpTermOrder.nonce,
+			nonce:    term_order_config.nonce,
 			id:       changes.next['id'],
 			parent:   changes.next['parent'],
 			previd:   changes.next['previd'] || 0,
@@ -814,7 +842,16 @@ function term_order_update_callback( response, post ) {
 			excluded: changes.next['excluded'],
 			tax:      taxonomy,
 			reload:   changes.next['reload']
-		}, term_order_update_callback );
+		}, function( response ) {
+			if ( ! response || ! response.success ) {
+				window.location.reload();
+				return;
+			}
+
+			term_order_update_callback( response );
+		} ).fail( function() {
+			window.location.reload();
+		} );
 	}
 
 	if ( ! changes.next && changes.reload ) {

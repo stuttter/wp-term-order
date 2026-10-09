@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070016;
+	public $db_version = 202602070019;
 
 	/**
 	 * @var string Database version
@@ -310,14 +310,28 @@ final class WP_Term_Order {
 	 * @return void
 	 */
 	public function localize_scripts() {
-
 		// Only if fancy
 		if ( true === $this->fancy ) {
+			$screen = get_current_screen();
+			$search = ! empty( $_REQUEST['s'] )
+				? trim( wp_unslash( $_REQUEST['s'] ) )
+				: '';
+			$is_hierarchical = $screen instanceof WP_Screen
+				&& ! empty( $screen->taxonomy )
+				&& is_taxonomy_hierarchical( $screen->taxonomy );
+
+			// WordPress flattens hierarchical tables for searches and explicit sorting.
+			$hierarchical = $is_hierarchical
+				&& empty( $_REQUEST['orderby'] )
+				&& '' === $search;
+
 			wp_localize_script(
 				'term-order-reorder',
 				'wpTermOrder',
 				array(
-					'nonce' => wp_create_nonce( 'wp_term_order_reordering_terms' ),
+					'hierarchical' => $hierarchical,
+					'nonce'        => wp_create_nonce( 'wp_term_order_reordering_terms' ),
+					'reorderable'  => ! $is_hierarchical || $hierarchical,
 				)
 			);
 		}
@@ -429,6 +443,8 @@ final class WP_Term_Order {
 				z-index: 99999;
 				box-sizing: border-box;
 				margin: 0 !important;
+				border-top: 0;
+				border-bottom: 0;
 				outline: 2px solid #2271b1;
 				outline-offset: -2px;
 				box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;

@@ -31,6 +31,9 @@ function get_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $
 function update_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function clean_term_cache( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function do_action( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
+function get_current_screen() { return wpto_test_call( __FUNCTION__, array() ); }
+function wp_create_nonce() { return 'test-nonce'; }
+function wp_localize_script( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 
 /**
  * Record the AJAX nonce check.
@@ -93,6 +96,14 @@ function get_terms( ...$arguments ) {
 }
 
 class WP_Error {}
+
+class WP_Screen {
+	public $taxonomy;
+
+	public function __construct( $taxonomy ) {
+		$this->taxonomy = $taxonomy;
+	}
+}
 
 final class WPTO_Test_WPDB {
 	public $term_taxonomy = 'wp_term_taxonomy';
