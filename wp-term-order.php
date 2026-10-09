@@ -18,6 +18,8 @@
 // Exit if accessed directly
 defined( 'ABSPATH' ) || exit;
 
+// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve the established indentation inside the conditional class declaration.
+
 if ( ! class_exists( 'WP_Term_Order' ) ) :
 /**
  * Main WP Term Order class
@@ -39,6 +41,8 @@ final class WP_Term_Order {
 	public $db_version = 202602070019;
 
 	/**
+	 * Editor asset version.
+	 *
 	 * @var int Editor asset version
 	 */
 	public $asset_version = 202610090003;
@@ -275,8 +279,11 @@ final class WP_Term_Order {
 			'strings'    => array(
 				'description' => __( 'Drag the assigned terms or use the arrow buttons to set their order for this post.', 'wp-term-order' ),
 				'empty'       => __( 'Assign at least two terms to set their order.', 'wp-term-order' ),
+				/* translators: %s: Term name. */
 				'moveDown'    => __( 'Move %s down', 'wp-term-order' ),
+				/* translators: %s: Term name. */
 				'moveUp'      => __( 'Move %s up', 'wp-term-order' ),
+				/* translators: 1: Term name. 2: New position. 3: Number of terms. */
 				'moved'       => __( '%1$s moved to position %2$d of %3$d.', 'wp-term-order' ),
 				'order'       => __( 'Order', 'wp-term-order' ),
 			),
@@ -296,18 +303,18 @@ final class WP_Term_Order {
 			}
 
 			$config['taxonomies'][] = array(
-				'name'         => $taxonomy->name,
-				'restBase'     => ! empty( $taxonomy->rest_base ) ? $taxonomy->rest_base : $taxonomy->name,
-				'label'        => $taxonomy->labels->name,
+				'name'          => $taxonomy->name,
+				'restBase'      => ! empty( $taxonomy->rest_base ) ? $taxonomy->rest_base : $taxonomy->name,
+				'label'         => $taxonomy->labels->name,
 				'singularLabel' => $taxonomy->labels->singular_name,
-				'orderLabel'   => sprintf(
+				'orderLabel'    => sprintf(
 					/* translators: %s: Taxonomy singular label. */
 					__( '%s order', 'wp-term-order' ),
 					$taxonomy->labels->singular_name
 				),
-				'delimiter'    => _x( ',', 'tag delimiter' ),
-				'hierarchical' => (bool) $taxonomy->hierarchical,
-				'terms'        => array_map(
+				'delimiter'     => _x( ',', 'tag delimiter', 'wp-term-order' ),
+				'hierarchical'  => (bool) $taxonomy->hierarchical,
+				'terms'         => array_map(
 					static function ( $term ) {
 						return array(
 							'id'   => (int) $term->term_id,
@@ -1265,6 +1272,7 @@ final class WP_Term_Order {
 
 	/** Query Filters *********************************************************/
 
+	// phpcs:disable Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress filter signature requires all parameters.
 	/**
 	 * Maybe filter the terms query clauses.
 	 *
@@ -1275,6 +1283,7 @@ final class WP_Term_Order {
 	 * @return array<string, string>
 	 */
 	public function terms_clauses( $clauses = array(), $taxonomies = array(), $args = array() ) {
+		// phpcs:enable Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 
 		// phpcs:disable Generic.WhiteSpace.ScopeIndent -- Preserve legacy file indentation.
 
@@ -1315,7 +1324,7 @@ final class WP_Term_Order {
 
 		$object_taxonomies = array();
 
-		$object_ids = ! empty( $args['object_ids'] ) ? array_filter( array_map( 'absint', (array) $args['object_ids'] ) ) : array();
+		$object_ids          = ! empty( $args['object_ids'] ) ? array_filter( array_map( 'absint', (array) $args['object_ids'] ) ) : array();
 		$cache_priming_query = isset( $args['fields'] ) && 'all_with_object_id' === $args['fields'];
 
 		if ( ! empty( $object_ids ) && ( 1 === count( $object_ids ) || $cache_priming_query ) ) {
@@ -1616,6 +1625,7 @@ final class WP_Term_Order {
 	 * @return void
 	 */
 	public function save_post_term_order( $post_id, $post ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.PHP.YodaConditions.NotYoda -- Verify the request nonce before using submitted order values.
 		if (
 			empty( $_POST['wp_term_order'] )
 			||
@@ -1726,6 +1736,7 @@ final class WP_Term_Order {
 				wp_set_object_terms( $post_id, $ordered_ids, $taxonomy_name, false );
 			}
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.PHP.YodaConditions.NotYoda
 	}
 
 	/** Admin Ajax ************************************************************/
@@ -2015,6 +2026,7 @@ final class WP_Term_Order {
 	}
 }
 endif;
+// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 /**
  * Instantiate the main WordPress Term Order class

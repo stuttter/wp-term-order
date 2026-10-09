@@ -394,11 +394,17 @@ final class TermOrderTest extends TestCase {
 		$this->assertTrue( $this->plugin->taxonomy_supported( 'private_taxonomy' ) );
 	}
 
+	/**
+	 * Built-in post taxonomies support per-object ordering.
+	 */
 	public function test_object_ordering_supports_built_in_post_taxonomies(): void {
 		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'category' ) );
 		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'post_tag' ) );
 	}
 
+	/**
+	 * Per-object ordering support can be filtered.
+	 */
 	public function test_object_ordering_support_can_be_filtered(): void {
 		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_object_taxonomy_supported'] = static function () {
 			return true;
@@ -414,7 +420,7 @@ final class TermOrderTest extends TestCase {
 	 * @param string $strategy Global order storage strategy.
 	 */
 	public function test_object_term_queries_use_relationship_order( string $strategy ): void {
-		$this->plugin->db_strategy = $strategy;
+		$this->plugin->db_strategy                       = $strategy;
 		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
 			'name' => 'category',
 			'sort' => true,
@@ -435,6 +441,9 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * Mixed object queries order only supported taxonomies.
+	 */
 	public function test_mixed_object_term_query_orders_supported_taxonomies(): void {
 		$GLOBALS['wpto_test']['callbacks']['get_taxonomy'] = static function ( $taxonomy_name ) {
 			return (object) array(
@@ -457,6 +466,9 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * Multi-object queries retain global order.
+	 */
 	public function test_multi_object_term_query_keeps_global_order(): void {
 		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
 			'name' => 'category',
@@ -476,6 +488,9 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * Explicit relationship order remains native.
+	 */
 	public function test_explicit_object_term_order_remains_native(): void {
 		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
 			'name' => 'category',
@@ -495,6 +510,9 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * Explicit global order remains global for object queries.
+	 */
 	public function test_explicit_global_order_remains_global_for_object_query(): void {
 		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
 			'name' => 'category',
@@ -514,6 +532,9 @@ final class TermOrderTest extends TestCase {
 		);
 	}
 
+	/**
+	 * Object queries can preserve a requested order.
+	 */
 	public function test_object_term_query_can_preserve_requested_order(): void {
 		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
 			'name' => 'category',
@@ -541,7 +562,7 @@ final class TermOrderTest extends TestCase {
 	 * @param string $strategy Global order storage strategy.
 	 */
 	public function test_object_term_query_honors_override_filter( string $strategy ): void {
-		$this->plugin->db_strategy = $strategy;
+		$this->plugin->db_strategy                       = $strategy;
 		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
 			'name' => 'category',
 			'sort' => true,
