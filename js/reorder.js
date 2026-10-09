@@ -185,9 +185,28 @@ function term_order_build_preview( node ) {
 
 		preview_row.find( 'input' ).removeAttr( 'id name' ).prop( 'disabled', true );
 		preview_row.children( '.hidden' ).remove();
-		preview_height += current.element.outerHeight();
 
 		preview.find( 'tbody' ).append( preview_row );
+	} );
+
+	preview
+		.css( {
+			left:       -9999,
+			top:        0,
+			visibility: 'hidden',
+			width:      source_table.outerWidth()
+		} )
+		.appendTo( 'body' );
+
+	preview.find( '.term-order-preview-row' ).each( function() {
+		preview_height += this.getBoundingClientRect().height;
+	} );
+
+	preview.detach().css( {
+		left:       '',
+		top:        '',
+		visibility: '',
+		width:      ''
 	} );
 
 	return preview.data( 'preview-height', preview_height );
@@ -573,10 +592,12 @@ sortable_terms_table.sortable( {
 			preview:       preview.appendTo( 'body' ).hide(),
 			scoped:        node.scoped,
 			slots:         [],
-			spacer:        jQuery( '<tr class="term-order-drop-spacer no-items"><td></td></tr>' )
+			spacer:        jQuery( '<tr class="term-order-drop-spacer no-items"><td><div class="term-order-drop-space"></div></td></tr>' )
 				.find( 'td' )
 				.attr( 'colspan', node.element.children().not( '.hidden' ).length )
-				.height( preview.data( 'preview-height' ) + 4 )
+				.end()
+				.find( '.term-order-drop-space' )
+				.height( preview.data( 'preview-height' ) )
 				.end(),
 			submitted:     false,
 			tree:          tree
