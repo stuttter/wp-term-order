@@ -64,13 +64,12 @@ disable an explicit `orderby` value of `order`.
 ### Can terms be ordered differently for each post?
 
 Yes. Categories and tags support per-post ordering automatically. For a custom
-taxonomy, enable WordPress's native relationship ordering when registering it:
+taxonomy, opt in with the object-ordering filter:
 
 ```
-register_taxonomy( 'genre', 'post', array(
-	'show_ui' => true,
-	'sort'    => true,
-) );
+add_filter( 'wp_term_order_object_taxonomy_supported', function( $supported, $taxonomies ) {
+	return in_array( 'genre', $taxonomies, true ) ? true : $supported;
+}, 10, 2 );
 ```
 
 The post editor adds an order panel for each supported taxonomy. WordPress

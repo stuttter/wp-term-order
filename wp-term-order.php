@@ -45,7 +45,7 @@ final class WP_Term_Order {
 	 *
 	 * @var int Editor asset version
 	 */
-	public $asset_version = 202610090003;
+	public $asset_version = 202610090004;
 
 	/**
 	 * @var string Database version
@@ -312,7 +312,6 @@ final class WP_Term_Order {
 					__( '%s order', 'wp-term-order' ),
 					$taxonomy->labels->singular_name
 				),
-				'delimiter'     => _x( ',', 'tag delimiter', 'wp-term-order' ),
 				'hierarchical'  => (bool) $taxonomy->hierarchical,
 				'terms'         => array_map(
 					static function ( $term ) {
@@ -349,6 +348,7 @@ final class WP_Term_Order {
 				! empty( $taxonomy->show_ui )
 				&& ( ! $block_editor || ! empty( $taxonomy->show_in_rest ) )
 				&& $this->taxonomy_object_ordering_supported( $taxonomy->name )
+				&& current_user_can( $taxonomy->cap->assign_terms )
 			) {
 				$retval[] = $taxonomy;
 			}
@@ -499,8 +499,8 @@ final class WP_Term_Order {
 	/**
 	 * Check whether taxonomies support per-object term ordering.
 	 *
-	 * WordPress stores this order in `term_relationships.term_order` when a
-	 * taxonomy is registered with `sort` enabled.
+	 * Categories and tags are supported by default. Custom taxonomies can opt in
+	 * with the `wp_term_order_object_taxonomy_supported` filter.
 	 *
 	 * @since 2.3.0
 	 * @param mixed $taxonomy Taxonomy name or names.
@@ -511,13 +511,8 @@ final class WP_Term_Order {
 		$retval     = ! empty( $taxonomies );
 
 		foreach ( $taxonomies as $taxonomy_name ) {
-			$taxonomy_object = get_taxonomy( sanitize_key( $taxonomy_name ) );
-
-			$native_support = $taxonomy_object && (
-				! empty( $taxonomy_object->sort )
-				||
-				in_array( $taxonomy_name, array( 'category', 'post_tag' ), true )
-			);
+			$taxonomy_name  = sanitize_key( $taxonomy_name );
+			$native_support = in_array( $taxonomy_name, array( 'category', 'post_tag' ), true );
 
 			if ( ! $native_support || ! $this->taxonomy_supported( $taxonomy_name ) ) {
 				$retval = false;
@@ -536,26 +531,6 @@ final class WP_Term_Order {
 		 * @param array<string> $taxonomies Taxonomy names.
 		 */
 		return (bool) apply_filters( 'wp_term_order_object_taxonomy_supported', $retval, $taxonomies );
-	}
-
-	/**
-	 * Enable WordPress's native relationship ordering for supported taxonomies.
-	 *
-	 * @since 2.3.0
-	 * @return void
-	 */
-	public function enable_object_ordering() {
-		foreach ( $this->taxonomies as $taxonomy_name ) {
-			if ( ! $this->taxonomy_object_ordering_supported( $taxonomy_name ) ) {
-				continue;
-			}
-
-			$taxonomy = get_taxonomy( $taxonomy_name );
-
-			if ( $taxonomy ) {
-				$taxonomy->sort = true;
-			}
-		}
 	}
 
 	/**
@@ -638,8 +613,7 @@ final class WP_Term_Order {
 			}
 
 			if ( ! empty( $ordered_ids ) ) {
-				$taxonomy->sort = true;
-				$result         = wp_set_object_terms( $post->ID, $ordered_ids, $taxonomy_name, false );
+				$result = $this->set_object_term_order( $post->ID, $ordered_ids, $taxonomy );
 
 				if ( is_wp_error( $result ) ) {
 					return $result;
@@ -648,6 +622,26 @@ final class WP_Term_Order {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Persist relationship order without changing later taxonomy operations.
+	 *
+	 * @since 2.3.0
+	 * @param int         $post_id     Post ID.
+	 * @param array<int>  $ordered_ids Ordered term IDs.
+	 * @param WP_Taxonomy $taxonomy    Taxonomy object.
+	 * @return array<int>|WP_Error Affected term taxonomy IDs or an error.
+	 */
+	private function set_object_term_order( $post_id, $ordered_ids, $taxonomy ) {
+		$previous_sort  = $taxonomy->sort;
+		$taxonomy->sort = true;
+
+		try {
+			return wp_set_object_terms( $post_id, $ordered_ids, $taxonomy->name, false );
+		} finally {
+			$taxonomy->sort = $previous_sort;
+		}
 	}
 
 	/**
@@ -1325,10 +1319,12 @@ final class WP_Term_Order {
 		$object_taxonomies = array();
 
 		$object_ids          = ! empty( $args['object_ids'] ) ? array_filter( array_map( 'absint', (array) $args['object_ids'] ) ) : array();
+		$query_taxonomies    = (array) $args['taxonomy'];
 		$cache_priming_query = isset( $args['fields'] ) && 'all_with_object_id' === $args['fields'];
+		$single_object_query = 1 === count( $object_ids ) && 1 === count( $query_taxonomies );
 
-		if ( ! empty( $object_ids ) && ( 1 === count( $object_ids ) || $cache_priming_query ) ) {
-			foreach ( (array) $args['taxonomy'] as $taxonomy_name ) {
+		if ( ! empty( $object_ids ) && ( $single_object_query || $cache_priming_query ) ) {
+			foreach ( $query_taxonomies as $taxonomy_name ) {
 				if ( $this->taxonomy_object_ordering_supported( $taxonomy_name ) ) {
 					$object_taxonomies[] = sanitize_key( $taxonomy_name );
 				}
@@ -1732,8 +1728,7 @@ final class WP_Term_Order {
 			}
 
 			if ( ! empty( $ordered_ids ) ) {
-				$taxonomy->sort = true;
-				wp_set_object_terms( $post_id, $ordered_ids, $taxonomy_name, false );
+				$this->set_object_term_order( $post_id, $ordered_ids, $taxonomy );
 			}
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.PHP.YodaConditions.NotYoda

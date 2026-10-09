@@ -135,7 +135,8 @@
 				} );
 			} else {
 				var input = $( '#tax-input-' + taxonomy.name ),
-					names = input.length ? String( input.val() ).split( taxonomy.delimiter || ',' ) : [];
+					delimiter = wp.i18n._x( ',', 'tag delimiter' ) || ',',
+					names = input.length ? String( input.val() ).split( delimiter ) : [];
 
 				$.each( names, function( index, name ) {
 					name = String( name ).trim();
