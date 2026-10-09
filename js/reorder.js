@@ -360,6 +360,36 @@ function term_order_snap_depth( state, pageX ) {
 }
 
 /**
+ * Keep row striping stable around the moving subtree preview.
+ *
+ * @returns {void}
+ */
+function term_order_update_drag_stripes() {
+	var stripe_index = 0,
+		preview_rows = drag_state.preview.find( '.term-order-preview-row' );
+
+	preview_rows.removeClass( 'term-order-row-odd term-order-row-even' );
+
+	sortable_terms_table.children( 'tr' ).each( function() {
+		var row = jQuery( this );
+
+		row.removeClass( 'term-order-row-odd term-order-row-even' );
+
+		if ( row.hasClass( 'term-order-drop-spacer' ) ) {
+			preview_rows.each( function() {
+				jQuery( this ).addClass( 0 === stripe_index % 2 ? 'term-order-row-odd' : 'term-order-row-even' );
+				stripe_index++;
+			} );
+		} else if ( row.hasClass( 'term-order-drag-group' ) || row.hasClass( 'ui-sortable-placeholder' ) || ! row.is( ':visible' ) ) {
+			return;
+		} else {
+			row.addClass( 0 === stripe_index % 2 ? 'term-order-row-odd' : 'term-order-row-even' );
+			stripe_index++;
+		}
+	} );
+}
+
+/**
  * Show the insertion boundary and parent selected by a slot.
  *
  * @param {object} slot Destination slot.
@@ -376,6 +406,8 @@ function term_order_show_slot( slot ) {
 	} else {
 		drag_state.spacer.insertAfter( slot.anchor );
 	}
+
+	term_order_update_drag_stripes();
 
 	top = drag_state.spacer.offset().top;
 
@@ -452,7 +484,7 @@ function term_order_insert_descendants( state ) {
  */
 function term_order_clear_drag_styles() {
 	sortable_terms_table.children( 'tr' )
-		.removeClass( 'term-order-drag-group' );
+		.removeClass( 'term-order-drag-group term-order-row-odd term-order-row-even' );
 	if ( drag_state && drag_state.preview ) {
 		drag_state.preview.remove();
 	}
@@ -601,6 +633,8 @@ sortable_terms_table.sortable( {
 		jQuery.each( descendants, function( index, descendant ) {
 			descendant.element.addClass( 'term-order-drag-group' ).hide();
 		} );
+
+		term_order_update_drag_stripes();
 
 		if ( node.scoped ) {
 			drag_state.slots = term_order_build_slots( node, tree );

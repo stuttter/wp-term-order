@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070015;
+	public $db_version = 202602070016;
 
 	/**
 	 * @var string Database version
@@ -370,11 +370,11 @@ final class WP_Term_Order {
 				cursor: move;
 			}
 
-			.striped.dragging > tbody > .ui-sortable-helper ~ tr:nth-child(even) {
-				background: #f9f9f9;
+			.striped.dragging > tbody > .term-order-row-odd {
+				background: #f6f7f7;
 			}
 
-			.striped.dragging > tbody > .ui-sortable-helper ~ tr:nth-child(odd) {
+			.striped.dragging > tbody > .term-order-row-even {
 				background: #fff;
 			}
 
