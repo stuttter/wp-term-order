@@ -5,6 +5,8 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/ajax-fixtures.php';
+require_once __DIR__ . '/class-wp-screen.php';
+require_once __DIR__ . '/admin-fixtures.php';
 
 final class TermOrderTest extends TestCase {
 	private $plugin;
@@ -15,7 +17,44 @@ final class TermOrderTest extends TestCase {
 		$this->plugin         = new WP_Term_Order();
 		$this->plugin->taxonomies = array( 'category', 'post_tag' );
 
-		$_POST = array();
+		$_POST    = array();
+		$_REQUEST = array();
+	}
+
+	/**
+	 * Localize hierarchy controls only when WordPress displays the taxonomy tree.
+	 *
+	 * @dataProvider reorderingContexts
+	 * @param string               $taxonomy             Current taxonomy.
+	 * @param array<string, mixed> $request              Current request values.
+	 * @param bool                 $expected_hierarchical Expected hierarchy control state.
+	 * @param bool                 $expected_reorderable  Expected drag state.
+	 */
+	public function test_localized_reordering_context( string $taxonomy, array $request, bool $expected_hierarchical, bool $expected_reorderable ): void {
+		$_REQUEST = $request;
+		$GLOBALS['wpto_test']['returns']['get_current_screen'] = new WP_Screen( $taxonomy );
+
+		$this->plugin->localize_scripts();
+
+		$config = $GLOBALS['wpto_test']['calls']['wp_localize_script'][0][2];
+		$this->assertSame( $expected_hierarchical, $config['hierarchical'] );
+		$this->assertSame( $expected_reorderable, $config['reorderable'] );
+	}
+
+	/**
+	 * Reordering contexts.
+	 *
+	 * @return array<string, array{string, array<string, string>, bool, bool}>
+	 */
+	public function reorderingContexts(): array {
+		return array(
+			'category tree'        => array( 'category', array(), true, true ),
+			'category search'      => array( 'category', array( 's' => 'Hardware' ), false, false ),
+			'zero search'          => array( 'category', array( 's' => '0' ), true, true ),
+			'whitespace search'    => array( 'category', array( 's' => ' ' ), true, true ),
+			'sorted categories'    => array( 'category', array( 'orderby' => 'name' ), false, false ),
+			'flat taxonomy search' => array( 'post_tag', array( 's' => 'Hello' ), false, true ),
+		);
 	}
 
 	/**
@@ -207,6 +246,113 @@ final class TermOrderTest extends TestCase {
 
 		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
 		$this->assertTrue( $payload->reload );
+		$this->assertArrayNotHasKey( 'wp_update_term', $GLOBALS['wpto_test']['calls'] ?? array() );
+	}
+
+	/**
+	 * Keep a moved subtree together when its parent is submitted explicitly.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Order storage strategy.
+	 */
+	public function test_explicit_parent_reorders_subtree_without_reload( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '1',
+			'previd' => '4',
+			'nextid' => '0',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 3, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 1,
+			'get_term_meta'                  => '1',
+		);
+
+		$GLOBALS['wpto_test']['callbacks']['get_terms'] = static function ( $args ) {
+			if ( 1 === $args['parent'] ) {
+				return array( new WP_Term( 4, 1 ) );
+			}
+
+			// The moved term has a child. Its row moves with the parent in the UI.
+			return 3 === $args['parent'] ? array( new WP_Term( 5, 3 ) ) : array();
+		};
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
+		}
+
+		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
+		$this->assertFalse( $payload->reload );
+		$this->assertArrayNotHasKey( 'wp_update_term', $GLOBALS['wpto_test']['calls'] ?? array() );
+		$this->assertCount( 1, $GLOBALS['wpto_test']['calls']['get_terms'] );
+	}
+
+	/**
+	 * Move a subtree into a parent that does not have any other children.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Order storage strategy.
+	 */
+	public function test_explicit_parent_change_supports_empty_sibling_group( string $strategy ): void {
+		$this->plugin->db_strategy = $strategy;
+
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '6',
+			'previd' => '0',
+			'nextid' => '0',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'      => new WP_Term( 3, 1 ),
+			'get_term_meta' => '9',
+			'get_terms'     => array(),
+		);
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
+		}
+
+		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
+		$this->assertTrue( $payload->reload );
+		$this->assertSame( array( 3, 'category', array( 'parent' => 6 ) ), $GLOBALS['wpto_test']['calls']['wp_update_term'][0] ?? null );
+		$this->assertSame( 1, $payload->new_pos[3]['order'] ?? null );
+	}
+
+	/** Reject an adjacent row outside the explicitly submitted sibling group. */
+	public function test_explicit_parent_rejects_row_from_another_sibling_group(): void {
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '1',
+			'previd' => '4',
+			'nextid' => '',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 3, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 2,
+		);
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected an invalid position response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'Invalid position data', $response->getMessage() );
+		}
+
+		$this->assertArrayNotHasKey( 'get_terms', $GLOBALS['wpto_test']['calls'] ?? array() );
 		$this->assertArrayNotHasKey( 'wp_update_term', $GLOBALS['wpto_test']['calls'] ?? array() );
 	}
 
