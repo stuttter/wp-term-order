@@ -369,13 +369,6 @@ function term_order_show_slot( slot ) {
 	var top,
 		table = sortable_terms_table.closest( 'table' );
 
-	sortable_terms_table.children( 'tr' )
-		.removeClass( 'term-order-drop-before term-order-drop-after' );
-
-	slot.anchor.addClass(
-		'before' === slot.type ? 'term-order-drop-before' : 'term-order-drop-after'
-	);
-
 	drag_state.spacer.detach();
 
 	if ( 'before' === slot.type ) {
@@ -389,7 +382,7 @@ function term_order_show_slot( slot ) {
 	drag_state.preview
 		.css( {
 			left:  table.offset().left,
-			top:   top + 2,
+			top:   top,
 			width: table.outerWidth()
 		} )
 		.show();
@@ -459,7 +452,7 @@ function term_order_insert_descendants( state ) {
  */
 function term_order_clear_drag_styles() {
 	sortable_terms_table.children( 'tr' )
-		.removeClass( 'term-order-drag-group term-order-drop-before term-order-drop-after' );
+		.removeClass( 'term-order-drag-group' );
 	if ( drag_state && drag_state.preview ) {
 		drag_state.preview.remove();
 	}

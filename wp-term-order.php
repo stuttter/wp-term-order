@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070012;
+	public $db_version = 202602070013;
 
 	/**
 	 * @var string Database version
@@ -398,16 +398,6 @@ final class WP_Term_Order {
 				line-height: 0 !important;
 			}
 
-			.wp-list-table .term-order-drop-before > th,
-			.wp-list-table .term-order-drop-before > td {
-				box-shadow: inset 0 3px #2271b1;
-			}
-
-			.wp-list-table .term-order-drop-after > th,
-			.wp-list-table .term-order-drop-after > td {
-				box-shadow: inset 0 -3px #2271b1;
-			}
-
 			.term-order-drag-proxy {
 				width: 1px !important;
 				height: 1px !important;
@@ -430,7 +420,7 @@ final class WP_Term_Order {
 				z-index: 99999;
 				box-sizing: border-box;
 				margin: 0 !important;
-				box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.35), 0 3px 8px rgba(0, 0, 0, 0.15);
+				box-shadow: inset 0 0 0 2px #2271b1, 0 3px 8px rgba(0, 0, 0, 0.15) !important;
 				opacity: 0.88;
 				pointer-events: none;
 			}
