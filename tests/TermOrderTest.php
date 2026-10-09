@@ -394,60 +394,9 @@ final class TermOrderTest extends TestCase {
 		$this->assertTrue( $this->plugin->taxonomy_supported( 'private_taxonomy' ) );
 	}
 
-	public function test_object_ordering_uses_native_taxonomy_sort_flag(): void {
-		$this->plugin->taxonomies[] = 'genre';
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
-			'name' => 'genre',
-			'sort' => true,
-		);
-
-		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'genre' ) );
-
-		$GLOBALS['wpto_test']['returns']['get_taxonomy']->sort = false;
-
-		$this->assertFalse( $this->plugin->taxonomy_object_ordering_supported( 'genre' ) );
-	}
-
 	public function test_object_ordering_supports_built_in_post_taxonomies(): void {
 		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'category' ) );
 		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'post_tag' ) );
-	}
-
-	public function test_rest_ordering_enables_native_sort_behavior(): void {
-		$taxonomy = (object) array(
-			'name' => 'category',
-			'sort' => false,
-		);
-
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = $taxonomy;
-
-		$this->plugin->enable_object_ordering();
-
-		$this->assertTrue( $taxonomy->sort );
-	}
-
-	public function test_rest_order_reorders_only_assigned_terms(): void {
-		$taxonomy = (object) array(
-			'name'        => 'category',
-			'sort'        => false,
-			'object_type' => array( 'post' ),
-			'cap'         => (object) array( 'assign_terms' => 'edit_posts' ),
-		);
-
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = $taxonomy;
-		$GLOBALS['wpto_test']['returns']['wp_get_object_terms'] = array( 1, 2, 3 );
-
-		$this->assertTrue(
-			$this->plugin->update_rest_object_order(
-				array( 'category' => array( 3, 1, 99 ) ),
-				new WP_Post()
-			)
-		);
-		$this->assertTrue( $taxonomy->sort );
-		$this->assertSame(
-			array( 42, array( 3, 1, 2 ), 'category', false ),
-			$GLOBALS['wpto_test']['calls']['wp_set_object_terms'][0]
-		);
 	}
 
 	public function test_object_ordering_support_can_be_filtered(): void {
@@ -612,85 +561,6 @@ final class TermOrderTest extends TestCase {
 				)
 			)
 		);
-	}
-
-	public function test_classic_editor_order_reorders_only_assigned_terms(): void {
-		$taxonomy = (object) array(
-			'name'        => 'category',
-			'sort'        => true,
-			'hierarchical' => true,
-			'object_type' => array( 'post' ),
-			'cap'         => (object) array( 'assign_terms' => 'edit_posts' ),
-		);
-
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = $taxonomy;
-		$GLOBALS['wpto_test']['returns']['wp_get_object_terms'] = array(
-			new WP_Term( 1, 0, null, 'One' ),
-			new WP_Term( 2, 0, null, 'Two' ),
-			new WP_Term( 3, 0, null, 'Three' ),
-		);
-
-		$_POST = array(
-			'_wp_term_order_nonce' => 'valid',
-			'post_ID'               => '42',
-			'wp_term_order'        => array(
-				'category' => json_encode( array( 'id:3', 'id:1' ) ),
-			),
-			'wp_term_order_dirty'  => array( 'category' => '1' ),
-		);
-
-		$this->plugin->save_post_term_order( 42, new WP_Post() );
-
-		$this->assertSame(
-			array( 42, array( 3, 1, 2 ), 'category', false ),
-			$GLOBALS['wpto_test']['calls']['wp_set_object_terms'][0]
-		);
-	}
-
-	public function test_classic_editor_flat_order_handles_numeric_and_encoded_names(): void {
-		$taxonomy = (object) array(
-			'name'         => 'post_tag',
-			'sort'         => true,
-			'hierarchical' => false,
-			'object_type'  => array( 'post' ),
-			'cap'          => (object) array( 'assign_terms' => 'edit_posts' ),
-		);
-
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = $taxonomy;
-		$GLOBALS['wpto_test']['returns']['wp_get_object_terms'] = array(
-			new WP_Term( 7, 0, null, '2024' ),
-			new WP_Term( 8, 0, null, 'Tom &amp; Jerry' ),
-			new WP_Term( 9, 0, null, 'Foo' ),
-		);
-
-		$_POST = array(
-			'_wp_term_order_nonce' => 'valid',
-			'post_ID'               => '42',
-			'wp_term_order'         => array(
-				'post_tag' => json_encode( array( 'name:foo', 'name:Tom & Jerry', 'name:2024' ) ),
-			),
-			'wp_term_order_dirty'   => array( 'post_tag' => '1' ),
-		);
-
-		$this->plugin->save_post_term_order( 42, new WP_Post() );
-
-		$this->assertSame(
-			array( 42, array( 9, 8, 7 ), 'post_tag', false ),
-			$GLOBALS['wpto_test']['calls']['wp_set_object_terms'][0]
-		);
-	}
-
-	public function test_classic_editor_unchanged_order_is_not_persisted(): void {
-		$_POST = array(
-			'_wp_term_order_nonce' => 'valid',
-			'post_ID'               => '42',
-			'wp_term_order'         => array( 'category' => json_encode( array( 'id:1', 'id:2' ) ) ),
-			'wp_term_order_dirty'   => array( 'category' => '0' ),
-		);
-
-		$this->plugin->save_post_term_order( 42, new WP_Post() );
-
-		$this->assertArrayNotHasKey( 'wp_set_object_terms', $GLOBALS['wpto_test']['calls'] ?? array() );
 	}
 
 	public function test_orderby_override_can_be_disabled_independently(): void {

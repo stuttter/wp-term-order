@@ -507,7 +507,7 @@ final class WP_Term_Order {
 			$taxonomy_object = get_taxonomy( sanitize_key( $taxonomy_name ) );
 
 			$native_support = $taxonomy_object && (
-				true === $taxonomy_object->sort
+				! empty( $taxonomy_object->sort )
 				||
 				in_array( $taxonomy_name, array( 'category', 'post_tag' ), true )
 			);

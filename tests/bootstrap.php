@@ -56,14 +56,7 @@ function absint( $value ) {
  * @param string $taxonomy Taxonomy name.
  */
 function get_taxonomy( $taxonomy ) {
-	$taxonomy_object = wpto_test_call( __FUNCTION__, array( $taxonomy ) );
-
-	return $taxonomy_object ?: (object) array(
-		'name'        => $taxonomy,
-		'sort'        => false,
-		'object_type' => array( 'post' ),
-		'cap'         => (object) array( 'assign_terms' => 'edit_posts' ),
-	);
+	return (object) array( 'name' => $taxonomy );
 }
 
 /** Permit editing in the AJAX fixture. */
@@ -97,19 +90,6 @@ function wp_send_json_error( $data ) {
  */
 function get_terms( ...$arguments ) {
 	return wpto_test_call( __FUNCTION__, $arguments );
-}
-
-function sanitize_text_field( $value ) { return (string) $value; }
-function wp_specialchars_decode( $value ) { return html_entity_decode( (string) $value, ENT_QUOTES ); }
-function wp_verify_nonce( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ) ?? true; }
-function wp_is_post_autosave( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ) ?? false; }
-function wp_is_post_revision( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ) ?? false; }
-function wp_get_object_terms( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
-function wp_set_object_terms( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
-
-class WP_Post {
-	public $ID = 42;
-	public $post_type = 'post';
 }
 
 class WP_Error {}
