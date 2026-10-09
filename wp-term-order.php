@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070013;
+	public $db_version = 202602070014;
 
 	/**
 	 * @var string Database version
@@ -376,6 +376,15 @@ final class WP_Term_Order {
 
 			.striped.dragging > tbody > .ui-sortable-helper ~ tr:nth-child(odd) {
 				background: #fff;
+			}
+
+			.wp-list-table.dragging > tbody > tr {
+				pointer-events: none;
+			}
+
+			.wp-list-table.dragging {
+				-webkit-user-select: none;
+				user-select: none;
 			}
 
 			.wp-list-table .to-updating tr,
