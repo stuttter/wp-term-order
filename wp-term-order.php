@@ -36,7 +36,7 @@ final class WP_Term_Order {
 	/**
 	 * @var int Database version
 	 */
-	public $db_version = 202602070014;
+	public $db_version = 202602070015;
 
 	/**
 	 * @var string Database version
@@ -429,7 +429,9 @@ final class WP_Term_Order {
 				z-index: 99999;
 				box-sizing: border-box;
 				margin: 0 !important;
-				box-shadow: inset 0 0 0 2px #2271b1, 0 3px 8px rgba(0, 0, 0, 0.15) !important;
+				outline: 2px solid #2271b1;
+				outline-offset: -2px;
+				box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
 				opacity: 0.88;
 				pointer-events: none;
 			}
