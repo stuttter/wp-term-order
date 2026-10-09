@@ -5,6 +5,8 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/ajax-fixtures.php';
+require_once __DIR__ . '/class-wp-screen.php';
+require_once __DIR__ . '/admin-fixtures.php';
 
 final class TermOrderTest extends TestCase {
 	private $plugin;
@@ -46,11 +48,11 @@ final class TermOrderTest extends TestCase {
 	 */
 	public function reorderingContexts(): array {
 		return array(
-			'category tree'       => array( 'category', array(), true, true ),
-			'category search'     => array( 'category', array( 's' => 'Hardware' ), false, false ),
-			'zero search'         => array( 'category', array( 's' => '0' ), true, true ),
-			'whitespace search'   => array( 'category', array( 's' => ' ' ), true, true ),
-			'sorted categories'   => array( 'category', array( 'orderby' => 'name' ), false, false ),
+			'category tree'        => array( 'category', array(), true, true ),
+			'category search'      => array( 'category', array( 's' => 'Hardware' ), false, false ),
+			'zero search'          => array( 'category', array( 's' => '0' ), true, true ),
+			'whitespace search'    => array( 'category', array( 's' => ' ' ), true, true ),
+			'sorted categories'    => array( 'category', array( 'orderby' => 'name' ), false, false ),
 			'flat taxonomy search' => array( 'post_tag', array( 's' => 'Hello' ), false, true ),
 		);
 	}

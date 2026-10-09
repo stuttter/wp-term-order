@@ -312,8 +312,9 @@ final class WP_Term_Order {
 	public function localize_scripts() {
 		// Only if fancy
 		if ( true === $this->fancy ) {
-			$screen = get_current_screen();
-			$search = ! empty( $_REQUEST['s'] )
+			$screen          = get_current_screen();
+			// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Read-only list-table context mirrors WordPress core.
+			$search          = ! empty( $_REQUEST['s'] )
 				? trim( wp_unslash( $_REQUEST['s'] ) )
 				: '';
 			$is_hierarchical = $screen instanceof WP_Screen
@@ -321,9 +322,10 @@ final class WP_Term_Order {
 				&& is_taxonomy_hierarchical( $screen->taxonomy );
 
 			// WordPress flattens hierarchical tables for searches and explicit sorting.
-			$hierarchical = $is_hierarchical
+			$hierarchical    = $is_hierarchical
 				&& empty( $_REQUEST['orderby'] )
 				&& '' === $search;
+			// phpcs:enable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 			wp_localize_script(
 				'term-order-reorder',
