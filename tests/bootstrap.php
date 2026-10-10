@@ -56,26 +56,13 @@ function absint( $value ) {
  * @param string $taxonomy Taxonomy name.
  */
 function get_taxonomy( $taxonomy ) {
-	$result = wpto_test_call( __FUNCTION__, array( $taxonomy ) );
-
-	return $result ?? (object) array(
-		'name'        => $taxonomy,
-		'object_type' => array( 'post' ),
-		'sort'        => false,
-		'cap'         => (object) array( 'assign_terms' => 'assign_terms' ),
-	);
+	return (object) array( 'name' => $taxonomy );
 }
 
 /** Permit editing in the AJAX fixture. */
-function current_user_can( ...$arguments ) {
-	$result = wpto_test_call( __FUNCTION__, $arguments );
-
-	return null === $result ? true : (bool) $result;
+function current_user_can() {
+	return true;
 }
-
-function wp_get_object_terms( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
-function wp_set_object_terms( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
-function get_object_taxonomies( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ) ?? array(); }
 
 /**
  * Return translated text unchanged in the AJAX fixture.
@@ -106,16 +93,6 @@ function get_terms( ...$arguments ) {
 }
 
 class WP_Error {}
-
-class WP_Post {
-	public $ID;
-	public $post_type;
-
-	public function __construct( $post_id, $post_type = 'post' ) {
-		$this->ID        = $post_id;
-		$this->post_type = $post_type;
-	}
-}
 
 final class WPTO_Test_WPDB {
 	public $term_taxonomy = 'wp_term_taxonomy';

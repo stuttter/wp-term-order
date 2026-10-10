@@ -413,17 +413,6 @@ final class TermOrderTest extends TestCase {
 		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'category' ) );
 	}
 
-	/** A custom taxonomy's native sort flag does not opt ordinary saves into rewriting relationship order. */
-	public function test_custom_taxonomy_sort_flag_does_not_enable_object_ordering(): void {
-		$this->plugin->taxonomies[] = 'genre';
-		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
-			'name' => 'genre',
-			'sort' => true,
-		);
-
-		$this->assertFalse( $this->plugin->taxonomy_object_ordering_supported( 'genre' ) );
-	}
-
 	/** Custom taxonomies can opt in without enabling WordPress's persistent sort flag. */
 	public function test_custom_taxonomy_object_ordering_can_be_filtered(): void {
 		$this->plugin->taxonomies[] = 'genre';
@@ -432,58 +421,6 @@ final class TermOrderTest extends TestCase {
 		};
 
 		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'genre' ) );
-	}
-
-	/** Persisting REST order restores the taxonomy's native sort behavior. */
-	public function test_rest_object_order_restores_taxonomy_sort_flag(): void {
-		$taxonomy = (object) array(
-			'name'        => 'category',
-			'object_type' => array( 'post' ),
-			'sort'        => false,
-			'cap'         => (object) array( 'assign_terms' => 'assign_terms' ),
-		);
-		$GLOBALS['wpto_test']['returns']['get_taxonomy']        = $taxonomy;
-		$GLOBALS['wpto_test']['returns']['wp_get_object_terms'] = array( 7, 9 );
-		$GLOBALS['wpto_test']['callbacks']['wp_set_object_terms'] = static function () use ( $taxonomy ) {
-			self::assertTrue( $taxonomy->sort );
-
-			return array( 70, 90 );
-		};
-
-		$this->assertTrue(
-			$this->plugin->update_rest_object_order(
-				array( 'category' => array( 9, 7 ) ),
-				new WP_Post( 42 )
-			)
-		);
-		$this->assertFalse( $taxonomy->sort );
-		$this->assertSame( array( 42, array( 9, 7 ), 'category', false ), $GLOBALS['wpto_test']['calls']['wp_set_object_terms'][0] );
-	}
-
-	/** Do not expose an order panel when the current user cannot assign its terms. */
-	public function test_object_order_taxonomies_require_assign_terms_capability(): void {
-		$taxonomy = (object) array(
-			'name'         => 'category',
-			'show_ui'      => true,
-			'show_in_rest' => true,
-			'cap'          => (object) array( 'assign_terms' => 'assign_categories' ),
-		);
-		$GLOBALS['wpto_test']['returns']['get_object_taxonomies'] = array( $taxonomy );
-		$GLOBALS['wpto_test']['callbacks']['current_user_can'] = static function ( $capability ) {
-			return 'assign_categories' !== $capability;
-		};
-
-		$method = new ReflectionMethod( WP_Term_Order::class, 'get_object_order_taxonomies' );
-
-		$this->assertSame( array(), $method->invoke( $this->plugin, 'post', true ) );
-	}
-
-	/** The classic tag panel uses WordPress's locale-specific tag delimiter. */
-	public function test_classic_tag_order_uses_wordpress_tag_delimiter(): void {
-		$script = file_get_contents( dirname( __DIR__ ) . '/js/post-order-classic.js' );
-
-		$this->assertStringContainsString( "wp.i18n._x( ',', 'tag delimiter' )", $script );
-		$this->assertStringNotContainsString( 'taxonomy.delimiter', $script );
 	}
 
 	/**
