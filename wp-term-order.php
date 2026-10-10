@@ -12,7 +12,7 @@
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Tested up to:      7.1
- * Version:           2.2.0
+ * Version:           2.3.0
  */
 
 // Exit if accessed directly
@@ -33,7 +33,7 @@ final class WP_Term_Order {
 	/**
 	 * @var string Plugin version
 	 */
-	public $version = '2.2.0';
+	public $version = '2.3.0';
 
 	/**
 	 * @var int Database version
