@@ -1815,6 +1815,7 @@ final class WP_Term_Order {
 		// Sanitize positions
 		$previd     = empty( $_POST['previd']   ) ? false : (int) $_POST['previd'];
 		$nextid     = empty( $_POST['nextid']   ) ? false : (int) $_POST['nextid'];
+		$has_start  = isset( $_POST['start'] );
 		$start      = empty( $_POST['start']    ) ? 1     : (int) $_POST['start'];
 		$has_parent = isset( $_POST['parent'] );
 		$excluded   = empty( $_POST['excluded'] ) || ! wp_is_numeric_array( $_POST['excluded'] )
@@ -1891,10 +1892,11 @@ final class WP_Term_Order {
 		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// Get term siblings for relative ordering
-		$siblings = get_terms( array(
+		$batch_size = 100;
+		$siblings   = get_terms( array(
 			'taxonomy'   => $taxonomy,
 			'depth'      => 1,
-			'number'     => 100,
+			'number'     => $batch_size,
 			'parent'     => (int) $parent_id,
 			'orderby'    => 'order',
 			'order'      => 'ASC',
@@ -1919,7 +1921,7 @@ final class WP_Term_Order {
 		// phpcs:enable Generic.WhiteSpace.ScopeIndent
 
 		// An empty sibling group still needs an explicit first position.
-		if ( empty( $siblings ) ) {
+		if ( empty( $siblings ) && ! $has_start ) {
 			$this->set_term_order( $term->term_id, $taxonomy, $start, true );
 
 			$term_ancestors = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
@@ -1998,7 +2000,7 @@ final class WP_Term_Order {
 		}
 
 		// max per request
-		if ( ! isset( $retval->next ) && count( $siblings ) > 1 ) {
+		if ( ! isset( $retval->next ) && count( $siblings ) === $batch_size ) {
 			$retval->next = array(
 				'id'       => $term->term_id,
 				'previd'   => $previd,

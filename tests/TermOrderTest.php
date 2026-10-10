@@ -183,8 +183,8 @@ final class TermOrderTest extends TestCase {
 		$this->assertSame( array( 3, 'category', array( 'parent' => 0 ) ), $GLOBALS['wpto_test']['calls']['wp_update_term'][0] ?? null );
 	}
 
-	/** Confirm a parent change marks a follow-up batch for reload. */
-	public function test_parent_change_marks_followup_batch_for_reload(): void {
+	/** Confirm a small sibling group completes without an unnecessary follow-up batch. */
+	public function test_parent_change_with_small_sibling_group_reloads_without_followup(): void {
 		$this->plugin->db_strategy = 'meta';
 
 		$_POST = array(
@@ -212,7 +212,82 @@ final class TermOrderTest extends TestCase {
 		}
 
 		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
-		$this->assertSame( 1, $payload->next['reload'] );
+		$this->assertFalse( $payload->next );
+		$this->assertTrue( $payload->reload );
+	}
+
+	/** Confirm an empty continuation does not move the term to the end. */
+	public function test_empty_followup_batch_does_not_rewrite_moved_term(): void {
+		$this->plugin->db_strategy = 'meta';
+
+		$_POST = array(
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '1',
+			'previd' => '0',
+			'nextid' => '0',
+			'start'  => '7',
+			'reload' => '1',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'      => new WP_Term( 3, 1 ),
+			'get_term_meta' => '6',
+			'get_terms'     => array(),
+		);
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
+		}
+
+		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
+		$this->assertFalse( $payload->next );
+		$this->assertTrue( $payload->reload );
+		$this->assertSame( array(), $payload->new_pos );
+		$this->assertArrayNotHasKey( 'update_term_meta', $GLOBALS['wpto_test']['calls'] ?? array() );
+	}
+
+	/** Confirm a complete sibling batch requests a continuation. */
+	public function test_full_sibling_batch_requests_followup(): void {
+		$this->plugin->db_strategy = 'meta';
+
+		$_POST = array(
+			'id'     => '101',
+			'tax'    => 'category',
+			'parent' => '1',
+			'previd' => '100',
+			'nextid' => '0',
+		);
+
+		$GLOBALS['wpto_test']['returns'] = array(
+			'get_term'                       => new WP_Term( 101, 1 ),
+			'wp_get_term_taxonomy_parent_id' => 1,
+			'get_term_meta'                  => '0',
+		);
+
+		$GLOBALS['wpto_test']['callbacks']['get_terms'] = static function () {
+			$siblings = array();
+
+			for ( $term_id = 1; $term_id <= 100; ++$term_id ) {
+				$siblings[] = new WP_Term( $term_id, 1 );
+			}
+
+			return $siblings;
+		};
+
+		try {
+			$this->plugin->ajax_reordering_terms();
+			$this->fail( 'Expected a success JSON response.' );
+		} catch ( RuntimeException $response ) {
+			$this->assertSame( 'success', $response->getMessage() );
+		}
+
+		$payload = $GLOBALS['wpto_test']['calls']['wp_send_json_success'][0][0];
+		$this->assertSame( 102, $payload->next['start'] );
+		$this->assertFalse( $payload->reload );
 	}
 
 	/** Confirm a follow-up batch retains the final reload response. */
