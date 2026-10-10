@@ -6,7 +6,7 @@ License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Requires at least: 6.4
 Requires PHP:      7.4
 Tested up to:      7.1
-Stable tag:        2.2.0
+Stable tag:        2.3.0
 
 Sort taxonomy terms your way.
 
@@ -73,6 +73,15 @@ The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order
 http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
+
+= 2.3.0 =
+* Add hierarchical drag and drop with a live placement preview and horizontal depth selection.
+* Add per-post term ordering to the block editor and Classic Editor.
+* Preserve explicit term query ordering.
+* Correct metadata ordering across nested and consecutive term queries.
+* Strengthen hierarchy validation and batched sibling reordering.
+* Require PHP 7.4 and WordPress 6.4 or newer.
+* Declare compatibility with WordPress 7.1.
 
 = 2.2.0 =
 * Fix CSRF. Thank you Nabil Irawan.
