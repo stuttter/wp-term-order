@@ -1456,7 +1456,7 @@ final class WP_Term_Order {
 		}
 
 		// max per request
-		if ( ! isset( $retval->next ) && $batch_size === count( $siblings ) ) {
+		if ( ! isset( $retval->next ) && count( $siblings ) === $batch_size ) {
 			$retval->next = array(
 				'id'       => $term->term_id,
 				'previd'   => $previd,

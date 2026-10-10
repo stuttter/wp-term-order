@@ -221,13 +221,13 @@ final class TermOrderTest extends TestCase {
 		$this->plugin->db_strategy = 'meta';
 
 		$_POST = array(
-			'id'       => '3',
-			'tax'      => 'category',
-			'parent'   => '1',
-			'previd'   => '0',
-			'nextid'   => '0',
-			'start'    => '7',
-			'reload'   => '1',
+			'id'     => '3',
+			'tax'    => 'category',
+			'parent' => '1',
+			'previd' => '0',
+			'nextid' => '0',
+			'start'  => '7',
+			'reload' => '1',
 		);
 
 		$GLOBALS['wpto_test']['returns'] = array(
