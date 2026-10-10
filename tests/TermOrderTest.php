@@ -469,6 +469,221 @@ final class TermOrderTest extends TestCase {
 		$this->assertTrue( $this->plugin->taxonomy_supported( 'private_taxonomy' ) );
 	}
 
+	/**
+	 * Built-in post taxonomies support per-object ordering.
+	 */
+	public function test_object_ordering_supports_built_in_post_taxonomies(): void {
+		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'category' ) );
+		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'post_tag' ) );
+	}
+
+	/**
+	 * Per-object ordering support can be filtered.
+	 */
+	public function test_object_ordering_support_can_be_filtered(): void {
+		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_object_taxonomy_supported'] = static function () {
+			return true;
+		};
+
+		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'category' ) );
+	}
+
+	/** Custom taxonomies can opt in without enabling WordPress's persistent sort flag. */
+	public function test_custom_taxonomy_object_ordering_can_be_filtered(): void {
+		$this->plugin->taxonomies[] = 'genre';
+		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_object_taxonomy_supported'] = static function ( $supported, $taxonomies ) {
+			return array( 'genre' ) === $taxonomies ? true : $supported;
+		};
+
+		$this->assertTrue( $this->plugin->taxonomy_object_ordering_supported( 'genre' ) );
+	}
+
+	/**
+	 * Object-scoped default queries use relationship order in both strategies.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Global order storage strategy.
+	 */
+	public function test_object_term_queries_use_relationship_order( string $strategy ): void {
+		$this->plugin->db_strategy                       = $strategy;
+		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
+			'name' => 'category',
+			'sort' => true,
+		);
+
+		$this->assertSame(
+			'modify_tables' === $strategy
+				? "tr.object_id, tt.taxonomy, CASE WHEN tt.taxonomy IN ('category') AND tr.term_order > 0 THEN 0 ELSE 1 END, CASE WHEN tt.taxonomy IN ('category') THEN tr.term_order ELSE 0 END, CASE WHEN tt.taxonomy IN ('category') THEN tt.order ELSE 0 END, t.name"
+				: "tr.object_id, tt.taxonomy, CASE WHEN tt.taxonomy IN ('category') AND tr.term_order > 0 THEN 0 ELSE 1 END, CASE WHEN tt.taxonomy IN ('category') THEN tr.term_order ELSE 0 END, CASE WHEN tt.taxonomy IN ('category') THEN CAST(order_clause.meta_value AS SIGNED) ELSE 0 END, t.name",
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'   => array( 'category' ),
+					'object_ids' => array( 42 ),
+					'orderby'    => 'name',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Mixed object queries order only supported taxonomies.
+	 */
+	public function test_mixed_object_term_query_orders_supported_taxonomies(): void {
+		$GLOBALS['wpto_test']['callbacks']['get_taxonomy'] = static function ( $taxonomy_name ) {
+			return (object) array(
+				'name' => $taxonomy_name,
+				'sort' => 'category' === $taxonomy_name,
+			);
+		};
+
+		$this->assertSame(
+			"tr.object_id, tt.taxonomy, CASE WHEN tt.taxonomy IN ('category') AND tr.term_order > 0 THEN 0 ELSE 1 END, CASE WHEN tt.taxonomy IN ('category') THEN tr.term_order ELSE 0 END, CASE WHEN tt.taxonomy IN ('category') THEN tt.order ELSE 0 END, t.name",
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'   => array( 'category', 'post_format' ),
+					'object_ids' => array( 42, 43 ),
+					'orderby'    => 'name',
+					'fields'     => 'all_with_object_id',
+				)
+			)
+		);
+	}
+
+	/** A direct multi-taxonomy query keeps the plugin's established global order. */
+	public function test_single_object_multi_taxonomy_query_keeps_global_order(): void {
+		$this->assertSame(
+			'tt.order, t.name',
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'   => array( 'category', 'post_tag' ),
+					'object_ids' => array( 42 ),
+					'orderby'    => 'name',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Multi-object queries retain global order.
+	 */
+	public function test_multi_object_term_query_keeps_global_order(): void {
+		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
+			'name' => 'category',
+			'sort' => true,
+		);
+
+		$this->assertSame(
+			'tt.order, t.name',
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'   => array( 'category' ),
+					'object_ids' => array( 42, 43 ),
+					'orderby'    => 'name',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Explicit relationship order remains native.
+	 */
+	public function test_explicit_object_term_order_remains_native(): void {
+		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
+			'name' => 'category',
+			'sort' => true,
+		);
+
+		$this->assertSame(
+			'tr.term_order',
+			$this->plugin->get_terms_orderby(
+				'tr.term_order',
+				array(
+					'taxonomy'   => array( 'category' ),
+					'object_ids' => array( 42 ),
+					'orderby'    => 'term_order',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Explicit global order remains global for object queries.
+	 */
+	public function test_explicit_global_order_remains_global_for_object_query(): void {
+		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
+			'name' => 'category',
+			'sort' => true,
+		);
+
+		$this->assertSame(
+			'tt.order',
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'   => array( 'category' ),
+					'object_ids' => array( 42 ),
+					'orderby'    => 'order',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Object queries can preserve a requested order.
+	 */
+	public function test_object_term_query_can_preserve_requested_order(): void {
+		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
+			'name' => 'category',
+			'sort' => true,
+		);
+
+		$this->assertSame(
+			't.name',
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'               => array( 'category' ),
+					'object_ids'             => array( 42 ),
+					'orderby'                => 'name',
+					'wp_term_order_override' => false,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Object queries honor the implicit override filter in both strategies.
+	 *
+	 * @dataProvider storageStrategies
+	 * @param string $strategy Global order storage strategy.
+	 */
+	public function test_object_term_query_honors_override_filter( string $strategy ): void {
+		$this->plugin->db_strategy                       = $strategy;
+		$GLOBALS['wpto_test']['returns']['get_taxonomy'] = (object) array(
+			'name' => 'category',
+			'sort' => true,
+		);
+		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_taxonomy_override_orderby_supported'] = static function () {
+			return false;
+		};
+
+		$this->assertSame(
+			't.name',
+			$this->plugin->get_terms_orderby(
+				't.name',
+				array(
+					'taxonomy'   => array( 'category' ),
+					'object_ids' => array( 42 ),
+					'orderby'    => 'name',
+				)
+			)
+		);
+	}
+
 	public function test_orderby_override_can_be_disabled_independently(): void {
 		$GLOBALS['wpto_test']['callbacks']['apply_filters:wp_term_order_taxonomy_override_orderby_supported'] = static function () {
 			return false;
