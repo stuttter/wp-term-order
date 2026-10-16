@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/uninstall-functions.php';
+require_once __DIR__ . '/class-wpto-uninstall-test-wpdb.php';
 require_once dirname( __DIR__ ) . '/includes/uninstall.php';
 
 /** Test deliberate plugin uninstall cleanup. */
@@ -16,7 +18,7 @@ final class UninstallTest extends TestCase {
 	/** Reset the WordPress fixtures before each test. */
 	protected function setUp(): void {
 		$GLOBALS['wpto_test'] = array();
-		$GLOBALS['wpdb']      = new WPTO_Test_WPDB();
+		$GLOBALS['wpdb']      = new WPTO_Uninstall_Test_WPDB();
 	}
 
 	/** Remove the custom column, term metadata, and schema version. */

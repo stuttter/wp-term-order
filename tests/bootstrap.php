@@ -29,64 +29,8 @@ function is_wp_error( $value ) { return $value instanceof WP_Error; }
 function get_term( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function get_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function update_term_meta( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
-
-/**
- * Record metadata deletion.
- *
- * @param mixed ...$arguments Metadata deletion arguments.
- * @return mixed
- */
-function delete_metadata( ...$arguments ) {
-	return wpto_test_call( __FUNCTION__, $arguments );
-}
-
-/**
- * Record option deletion.
- *
- * @param mixed ...$arguments Option deletion arguments.
- * @return mixed
- */
-function delete_option( ...$arguments ) {
-	return wpto_test_call( __FUNCTION__, $arguments );
-}
-
 function clean_term_cache( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
 function do_action( ...$arguments ) { return wpto_test_call( __FUNCTION__, $arguments ); }
-
-/** Return the configured multisite state. */
-function is_multisite() {
-	return (bool) ( wpto_test_call( __FUNCTION__, array() ) ?? false );
-}
-
-/**
- * Return configured site IDs.
- *
- * @param mixed ...$arguments Site-query arguments.
- * @return mixed
- */
-function get_sites( ...$arguments ) {
-	return wpto_test_call( __FUNCTION__, $arguments ) ?? array();
-}
-
-/**
- * Record a site switch.
- *
- * @param mixed ...$arguments Site-switch arguments.
- * @return mixed
- */
-function switch_to_blog( ...$arguments ) {
-	return wpto_test_call( __FUNCTION__, $arguments );
-}
-
-/**
- * Record restoration of the current site.
- *
- * @param mixed ...$arguments Site-restoration arguments.
- * @return mixed
- */
-function restore_current_blog( ...$arguments ) {
-	return wpto_test_call( __FUNCTION__, $arguments );
-}
 
 /**
  * Record the AJAX nonce check.
@@ -155,52 +99,9 @@ final class WPTO_Test_WPDB {
 	public $updates = array();
 	public $update_result = 1;
 
-	/**
-	 * Value returned from get_var().
-	 *
-	 * @var mixed
-	 */
-	public $get_var_result = null;
-
-	/**
-	 * Queries received by get_var().
-	 *
-	 * @var array<int, string>
-	 */
-	public $get_var_queries = array();
-
-	/**
-	 * Queries received by query().
-	 *
-	 * @var array<int, string>
-	 */
-	public $queries = array();
-
 	public function update( ...$arguments ) {
 		$this->updates[] = $arguments;
 		return $this->update_result;
-	}
-
-	/**
-	 * Record a scalar query and return its configured result.
-	 *
-	 * @param string $query Database query.
-	 * @return mixed
-	 */
-	public function get_var( $query ) {
-		$this->get_var_queries[] = $query;
-		return $this->get_var_result;
-	}
-
-	/**
-	 * Record a database query.
-	 *
-	 * @param string $query Database query.
-	 * @return bool
-	 */
-	public function query( $query ) {
-		$this->queries[] = $query;
-		return true;
 	}
 }
 
