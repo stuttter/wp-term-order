@@ -15,6 +15,13 @@ final class WPTO_Uninstall_Test_WPDB {
 	public $term_taxonomy = 'wp_term_taxonomy';
 
 	/**
+	 * Most recent database error.
+	 *
+	 * @var string
+	 */
+	public $last_error = '';
+
+	/**
 	 * Value returned from get_var().
 	 *
 	 * @var mixed
@@ -36,13 +43,21 @@ final class WPTO_Uninstall_Test_WPDB {
 	public $queries = array();
 
 	/**
+	 * Value returned from query().
+	 *
+	 * @var bool
+	 */
+	public $query_result = true;
+
+	/**
 	 * Record a scalar query and return its configured result.
 	 *
 	 * @param string $query Database query.
 	 * @return mixed
 	 */
 	public function get_var( $query ) {
-		$this->get_var_queries[] = $query;
+		$GLOBALS['wpto_test']['events'][] = 'inspect:' . $this->term_taxonomy;
+		$this->get_var_queries[]          = $query;
 		return $this->get_var_result;
 	}
 
@@ -53,7 +68,8 @@ final class WPTO_Uninstall_Test_WPDB {
 	 * @return bool
 	 */
 	public function query( $query ) {
-		$this->queries[] = $query;
-		return true;
+		$GLOBALS['wpto_test']['events'][] = 'drop:' . $this->term_taxonomy;
+		$this->queries[]                  = $query;
+		return $this->query_result;
 	}
 }

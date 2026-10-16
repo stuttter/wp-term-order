@@ -21,11 +21,11 @@ final class UninstallTest extends TestCase {
 		$GLOBALS['wpdb']      = new WPTO_Uninstall_Test_WPDB();
 	}
 
-	/** Remove the custom column, term metadata, and schema version. */
+	/** Remove the custom column and schema version. */
 	public function test_uninstall_removes_plugin_data_from_single_site(): void {
 		$GLOBALS['wpdb']->get_var_result = 'order';
 
-		wp_term_order_uninstall();
+		$this->assertTrue( wp_term_order_uninstall() );
 
 		$this->assertSame(
 			array( "SHOW COLUMNS FROM `wp_term_taxonomy` LIKE 'order';" ),
@@ -36,10 +36,6 @@ final class UninstallTest extends TestCase {
 			$GLOBALS['wpdb']->queries
 		);
 		$this->assertSame(
-			array( array( 'term', 0, 'order', '', true ) ),
-			$GLOBALS['wpto_test']['calls']['delete_metadata']
-		);
-		$this->assertSame(
 			array( array( 'wpdb_term_taxonomy_version' ) ),
 			$GLOBALS['wpto_test']['calls']['delete_option']
 		);
@@ -47,11 +43,28 @@ final class UninstallTest extends TestCase {
 
 	/** Keep repeated uninstall attempts safe when the column is already absent. */
 	public function test_uninstall_skips_missing_column(): void {
-		wp_term_order_uninstall();
+		$this->assertTrue( wp_term_order_uninstall() );
 
 		$this->assertSame( array(), $GLOBALS['wpdb']->queries );
-		$this->assertCount( 1, $GLOBALS['wpto_test']['calls']['delete_metadata'] );
 		$this->assertCount( 1, $GLOBALS['wpto_test']['calls']['delete_option'] );
+	}
+
+	/** Preserve the schema version when the database rejects the column drop. */
+	public function test_uninstall_reports_failed_column_drop(): void {
+		$GLOBALS['wpdb']->get_var_result = 'order';
+		$GLOBALS['wpdb']->query_result   = false;
+
+		$this->assertFalse( wp_term_order_uninstall() );
+		$this->assertArrayNotHasKey( 'delete_option', $GLOBALS['wpto_test']['calls'] );
+	}
+
+	/** Preserve the schema version when the column check fails. */
+	public function test_uninstall_reports_failed_column_check(): void {
+		$GLOBALS['wpdb']->last_error = 'Could not inspect the table.';
+
+		$this->assertFalse( wp_term_order_uninstall() );
+		$this->assertSame( array(), $GLOBALS['wpdb']->queries );
+		$this->assertArrayNotHasKey( 'delete_option', $GLOBALS['wpto_test']['calls'] );
 	}
 
 	/** Remove plugin data from each site during a network uninstall. */
@@ -64,7 +77,7 @@ final class UninstallTest extends TestCase {
 			$GLOBALS['wpdb']->term_taxonomy = "wp_{$site_id}_term_taxonomy";
 		};
 
-		wp_term_order_uninstall();
+		$this->assertTrue( wp_term_order_uninstall() );
 
 		$this->assertSame(
 			array(
@@ -89,7 +102,37 @@ final class UninstallTest extends TestCase {
 			),
 			$GLOBALS['wpdb']->queries
 		);
-		$this->assertCount( 2, $GLOBALS['wpto_test']['calls']['delete_metadata'] );
 		$this->assertCount( 2, $GLOBALS['wpto_test']['calls']['delete_option'] );
+		$this->assertSame(
+			array(
+				'switch:1',
+				'inspect:wp_1_term_taxonomy',
+				'drop:wp_1_term_taxonomy',
+				'delete_option:wpdb_term_taxonomy_version',
+				'restore',
+				'switch:3',
+				'inspect:wp_3_term_taxonomy',
+				'drop:wp_3_term_taxonomy',
+				'delete_option:wpdb_term_taxonomy_version',
+				'restore',
+			),
+			$GLOBALS['wpto_test']['events']
+		);
+	}
+
+	/** Restore every site and report failure when one column cannot be removed. */
+	public function test_network_uninstall_restores_sites_after_a_failed_drop(): void {
+		$GLOBALS['wpto_test']['returns']['is_multisite'] = true;
+		$GLOBALS['wpto_test']['returns']['get_sites']    = array( 1, 3 );
+		$GLOBALS['wpdb']->get_var_result                 = 'order';
+
+		$GLOBALS['wpto_test']['callbacks']['switch_to_blog'] = static function ( $site_id ) {
+			$GLOBALS['wpdb']->term_taxonomy = "wp_{$site_id}_term_taxonomy";
+			$GLOBALS['wpdb']->query_result  = 1 === $site_id;
+		};
+
+		$this->assertFalse( wp_term_order_uninstall() );
+		$this->assertCount( 2, $GLOBALS['wpto_test']['calls']['restore_current_blog'] );
+		$this->assertCount( 1, $GLOBALS['wpto_test']['calls']['delete_option'] );
 	}
 }

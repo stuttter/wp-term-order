@@ -5,10 +5,12 @@
  * @package WP_Term_Order
  */
 
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Remove WP Term Order data from the current site.
  *
- * @return void
+ * @return bool Whether the custom column was absent or removed successfully.
  */
 function wp_term_order_uninstall_site() {
 	global $wpdb;
@@ -17,25 +19,33 @@ function wp_term_order_uninstall_site() {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	$column = $wpdb->get_var( "SHOW COLUMNS FROM `{$wpdb->term_taxonomy}` LIKE 'order';" );
 
+	if ( '' !== $wpdb->last_error ) {
+		return false;
+	}
+
 	if ( 'order' === $column ) {
 		// Safe: the table and column names are fixed WordPress/plugin identifiers.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$wpdb->query( "ALTER TABLE `{$wpdb->term_taxonomy}` DROP COLUMN `order`;" );
+		$dropped = $wpdb->query( "ALTER TABLE `{$wpdb->term_taxonomy}` DROP COLUMN `order`;" );
+
+		if ( false === $dropped ) {
+			return false;
+		}
 	}
 
-	delete_metadata( 'term', 0, 'order', '', true );
 	delete_option( 'wpdb_term_taxonomy_version' );
+
+	return true;
 }
 
 /**
  * Remove WP Term Order data from every site where it may be stored.
  *
- * @return void
+ * @return bool Whether every site was cleaned successfully.
  */
 function wp_term_order_uninstall() {
 	if ( ! is_multisite() ) {
-		wp_term_order_uninstall_site();
-		return;
+		return wp_term_order_uninstall_site();
 	}
 
 	$site_ids = get_sites(
@@ -45,9 +55,17 @@ function wp_term_order_uninstall() {
 		)
 	);
 
+	$success = true;
+
 	foreach ( $site_ids as $site_id ) {
 		switch_to_blog( (int) $site_id );
-		wp_term_order_uninstall_site();
+
+		if ( ! wp_term_order_uninstall_site() ) {
+			$success = false;
+		}
+
 		restore_current_blog();
 	}
+
+	return $success;
 }
