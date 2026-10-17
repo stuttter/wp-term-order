@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.1
+
+- Remove the custom term-order column and schema version during deliberate uninstall on single-site and multisite installations.
+- Preserve shared term metadata and stop plugin deletion when database cleanup cannot be completed.
+
 ## 2.3.0
 
 - Require PHP 7.4 and WordPress 6.4 or newer.
