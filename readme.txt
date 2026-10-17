@@ -6,7 +6,7 @@ License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Requires at least: 6.4
 Requires PHP:      7.4
 Tested up to:      7.1
-Stable tag:        2.3.0
+Stable tag:        2.3.1
 
 Sort taxonomy terms your way.
 
@@ -75,6 +75,10 @@ The WordPress support forums: https://wordpress.org/support/plugin/wp-term-order
 http://github.com/stuttter/wp-term-order/
 
 == Changelog ==
+
+= 2.3.1 =
+* Remove the custom term-order column and schema version during deliberate uninstall on single-site and multisite installations.
+* Preserve shared term metadata and stop plugin deletion when database cleanup cannot be completed.
 
 = 2.3.0 =
 * Add hierarchical drag and drop with a live placement preview and horizontal depth selection.
