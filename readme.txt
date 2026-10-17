@@ -50,6 +50,8 @@ No. There are no new database tables with this plugin.
 
 Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
 
+Deactivating the plugin preserves that column and its ordering data. Deleting the plugin through WordPress removes the column and the plugin's database version option from each site. Existing term metadata, including values written by this plugin, is preserved because the generic `order` key may be shared with other plugins.
+
 = Can I use values such as 2.567 to describe a term's place in a hierarchy? =
 
 No. Order values are whole numbers. A term's parent is stored separately by WordPress, so use the Parent field to set its hierarchy and the Order field to position it among terms at that level.

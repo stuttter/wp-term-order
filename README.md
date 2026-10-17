@@ -23,6 +23,11 @@ No. There are no new database tables with this plugin.
 ### Does this modify existing database tables?
 
 Yes. The `wp_term_taxonomy` table is altered, and an `order` column is added.
+Deactivating the plugin preserves that column and its ordering data. Deleting
+the plugin through WordPress removes the column and the plugin's database
+version option from each site. Existing term metadata, including values written
+by this plugin, is preserved because the generic `order` key may be shared with
+other plugins.
 
 ### Can I query and sort by `order`?
 
